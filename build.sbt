@@ -6,3 +6,5 @@ lazy val root = (project in file("."))
   .settings(
     name := "sudokuuu"
   )
+
+libraryDependencies += "org.scalafx" % "scalafx_3" % "19.0.0-R30"

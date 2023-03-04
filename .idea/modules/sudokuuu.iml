@@ -11,7 +11,22 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-base:19:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-base:19:win:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-controls:19:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-controls:19:win:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-fxml:19:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-fxml:19:win:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-graphics:19:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-graphics:19:win:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-media:19:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-media:19:win:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-swing:19:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-swing:19:win:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-web:19:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.openjfx:javafx-web:19:win:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.10:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_3:3.2.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scalafx:scalafx_3:19.0.0-R30:jar" level="project" />
   </component>
 </module>
