@@ -1,6 +1,6 @@
 class GridCell(val region: GridRegion, var value: Option[Int] = None):
   require(value.getOrElse(1) >= 1 && value.getOrElse(1) <= 9)
-
+  
   def getValue = this.value
 
   def setValue(newValue: Int) =
