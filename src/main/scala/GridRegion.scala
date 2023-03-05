@@ -1,4 +1,4 @@
-class GridRegion(private val sum: Int, cellNumber: Int, private val cells: Set[(Int, Int)], private val color: String):
+class GridRegion(private val sum: Int, cellNumber: Int, private val cells: Set[(Int, Int)], private val color: String = "#FFFFFF"):
   require(this.areTheCellsOK
       && this.isTheColorOk
       && this.isContiguous
