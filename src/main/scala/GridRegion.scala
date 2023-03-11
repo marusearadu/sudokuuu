@@ -1,9 +1,8 @@
-class GridRegion(private val sum: Int, cellNumber: Int, private val cells: Set[(Int, Int)], private val color: String = "#FFFFFF"):
-  require(this.areTheCellsOK
-      && this.isTheColorOk
-      && this.isContiguous
-      && this.isTheSumOk
-  )
+class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], private val color: String = "#FFFFFF"):
+  require(this.areTheCellsOK, "Are the cells OK")
+  require(this.isTheColorOk, "is the color OK")
+  require(this.isContiguous, "is the region contiguous")
+  require(this.isTheSumOk, "is the sum ok")
 
   def getCells: Set[(Int, Int)] = this.cells
 
@@ -11,16 +10,18 @@ class GridRegion(private val sum: Int, cellNumber: Int, private val cells: Set[(
 
   def getSum: Int = this.sum
 
+  def getNumberOfCells: Int = this.cells.size
+
   private def isTheColorOk: Boolean =
     this.color.startsWith("#") && this.color.length == 7 &&
-      this.color.tail.map( _.asDigit ).forall( x => x >= 0 && x <= 9)
+      this.color.tail.map( _.asDigit ).forall( x => x >= 0 && x <= 15)
 
   private def areTheCellsOK: Boolean =
-    cellNumber <= 4 && cellNumber >= 2 && cellNumber == this.cells.size
+    cells.size <= 4 && cells.size >= 2
       && (cells.foldLeft(Set[Int]()){case (acc, (x, y)) => acc + x + y}).forall( x => x >= 0 && x < 9 )
 
-  private def isTheSumOk: Boolean = (1 until cellNumber + 1).sum <= sum
-    && sum <= (9 until 9 - cellNumber by -1).sum
+  private def isTheSumOk: Boolean = (1 to cells.size).sum <= sum
+    && sum <= (9 until 9 - cells.size by -1).sum
 
   private def isContiguous: Boolean =
     // Assumption that the set has at least 1 element
@@ -37,7 +38,11 @@ class GridRegion(private val sum: Int, cellNumber: Int, private val cells: Set[(
     neighbours == cells
 
   private def getNeighboursInTheSet(pos: (Int, Int)) =
-    // the function uses the fact that we already know that our grid
-    // has a rectangular shape and that neighbours share an edge
-    Set((pos._1 - 1, pos._2), (pos._1 + 1, pos._2), (pos._1, pos._2 - 1), (pos._1, pos._2 + 1)).intersect(cells)
+  // the function uses the fact that we already know that our grid
+  // has a rectangular shape and that neighbours share an edge
+    Set((pos._1 - 1, pos._2), (pos._1 + 1, pos._2), (pos._1, pos._2 - 1), (pos._1, pos._2 + 1))
+      .intersect(cells)
+
+  override def toString: String =
+    "A gridRegion object containing " + this.getNumberOfCells + " cells: " + this.getCells.mkString("; ") + ". The sum is " + this.getSum + "."
 end GridRegion

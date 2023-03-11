@@ -1,4 +1,4 @@
-class GridCell(private var region: Option[GridRegion] = None, private var value: Option[Int] = None):
+class GridCell(private var region: GridRegion, private var value: Option[Int] = None):
   require(value.getOrElse(1) >= 1 && value.getOrElse(1) <= 9)
   
   def getValue = this.value
@@ -10,7 +10,11 @@ class GridCell(private var region: Option[GridRegion] = None, private var value:
   def deleteValue() =
     this.value = None
 
-  def getRegion = this.region
-  def setRegion(newRegion: GridRegion) = this.region = Some(newRegion)
+  def getRegion: GridRegion = this.region
+  def setRegion(newRegion: GridRegion) =
+    this.region = newRegion
+
+  override def toString: String =
+    "A" + (if value.isDefined then " GridCell with value  " + this.value.getOrElse(0) else "n empty Gridcell") + ", belonging to " + this.region
 end GridCell
 
