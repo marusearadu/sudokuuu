@@ -1,27 +1,33 @@
-class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], private val color: String = "#FFFFFF"):
-  require(this.areTheCellsOK, "Are the cells OK")
-  require(this.isTheColorOk, "is the color OK")
-  require(this.isContiguous, "is the region contiguous")
-  require(this.isTheSumOk, "is the sum ok")
+class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], private var color: String = "#FFFFFF"):
+  require(this.areTheCellsOK, 
+    "There are either too many cells, too little cells, or the input value of one of them isn't in the interval [1, 9].")
+  require(this.isTheColorOk,  "The color doesn't follow the standard format.")
+  require(this.isContiguous,  "The region is not contiguous - there are some 'breaks' between the region's cells.")
+  require(this.isTheSumOk,    "The value of the sum is unattainable using " + this.getNumberOfCells + " cells." )
 
   def getCells: Set[(Int, Int)] = this.cells
 
   def getColor: String = this.color
 
+  def setColor(newColor: String) =
+    if isTheColorOk(newColor) then this.color = newColor
+
   def getSum: Int = this.sum
 
   def getNumberOfCells: Int = this.cells.size
 
-  private def isTheColorOk: Boolean =
-    this.color.startsWith("#") && this.color.length == 7 &&
-      this.color.tail.map( _.asDigit ).forall( x => x >= 0 && x <= 15)
+  private def isTheColorOk(checked: String) : Boolean =
+    checked.startsWith("#") && checked.length == 7 &&
+      checked.tail.map( _.asDigit ).forall( x => x >= 0 && x <= 15)
+    
+  private def isTheColorOk: Boolean = isTheColorOk(this.color)
 
   private def areTheCellsOK: Boolean =
     cells.size <= 4 && cells.size >= 2
       && (cells.foldLeft(Set[Int]()){case (acc, (x, y)) => acc + x + y}).forall( x => x >= 0 && x < 9 )
 
-  private def isTheSumOk: Boolean = (1 to cells.size).sum <= sum
-    && sum <= (9 until 9 - cells.size by -1).sum
+  private def isTheSumOk: Boolean = 
+    (this.getNumberOfCells * 1.5).toInt <= sum && sum <= (9 * this.getNumberOfCells) - (this.getNumberOfCells * 1.5).toInt
 
   private def isContiguous: Boolean =
     // Assumption that the set has at least 1 element
@@ -44,5 +50,5 @@ class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], priva
       .intersect(cells)
 
   override def toString: String =
-    "A gridRegion object containing " + this.getNumberOfCells + " cells: " + this.getCells.mkString("; ") + ". The sum is " + this.getSum + "."
+    "" + this.getNumberOfCells + " cells: {" + this.getCells.mkString("; ") + "} with sum " + this.getSum + " and color " + this.getColor + "."
 end GridRegion
