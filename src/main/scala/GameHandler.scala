@@ -24,7 +24,7 @@ class GameHandler(var selectedCell: Option[GridCell] = None, var accountingBubbl
   private def getGridCells = this.getGrid.getGridCells
   //TODO: updateGame(button: Button) =
 
-  def isGridFull: Boolean = getGridCells.flatten.forall( _.isNonEmpty() )
+  def isGridFull: Boolean = getGridCells.flatten.forall( _.isNonEmpty )
 
   private def areRowsCorrect: Boolean = this.getGridCells.forall( _.toSet == (1 to 9).toSet )
 
