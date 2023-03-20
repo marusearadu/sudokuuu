@@ -14,10 +14,10 @@ private val X               = "x"
 private val Y               = "y"
 private val VALUE           = "value"
 
-class GameHandler(var selectedCell: Option[GridCell] = None, private var accountingBubble: Set[Array[Int]] = Set(Array()), private var grid: Grid):
-  private def selectedRegion: Option[GridRegion] = this.selectedCell.map( _.getRegion )
+class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private var accountingBubble: Set[Array[Int]] = Set(Array()), private var grid: Grid):
+  private def selectedCell: Option[GridCell] = this.selectedPos.map( x => this.getGridCells(x._1)(x._2) )
 
-  private def getPossibleSumsOfRegion(region: GridRegion): Set[Array[Int]] =
+  private def possibleSumsOfARegion(region: GridRegion): Set[Array[Int]] =
     var possibleSums: Set[Array[Int]] = Set(Array())
     val theCellValues = region.getCells.toArray.map( x => this.getGridCells(x._1)(x._2).getValue )
     val emptyCells = theCellValues.filter( _ == 0 )
@@ -28,10 +28,24 @@ class GameHandler(var selectedCell: Option[GridCell] = None, private var account
 
     // possibleSums will have a lot of arrays that are identical up to a permutation
     // to get rid of them, we just group them by their respective idential sets and choose a random element
-    possibleSums.groupBy( _.toSet ).map( (x, y) => y.head ).toSet
+    possibleSums.filter( _.sum == emptyCellsSum ).groupBy( _.toSet ).map( (x, y) => y.head ).toSet
+
+  // some random bug appeared once but can't be repeated, i don't know why but i really do hope it was a special instance of me being stupid
+  def possibleValuesAt(pos: (Int, Int)) =
+    val valuesInThe3Square = this.getGridCells.slice( (pos._1 / 3) * 3, (pos._1 / 3) * 3 + 3 )
+      .flatMap( x => x.slice( (pos._2 / 3) * 3, (pos._2 / 3) * 3 + 3) )
+      .map( _.getValue )
+      .toSet
+    val valuesInTheRow = this.getGridCells(pos._1).map( _.getValue).toSet
+    val valuesInTheColumn = this.getGridCells.map( _(pos._2).getValue ).toSet
+    val takenValues = valuesInTheRow.union(valuesInTheColumn).union(valuesInThe3Square)
+
+    this.selectedCell
+      .map( x => this.possibleSumsOfARegion(x.getRegion).flatMap( _.toSet) ).getOrElse( Set[Int]() ) // getting all the possible values in this region according to possibleSumsOfARegion
+      .diff(takenValues)
 
   private def updateBubble(): Unit =
-    accountingBubble = this.selectedRegion.map(getPossibleSumsOfRegion).getOrElse(Set[Array[Int]]())
+    accountingBubble = this.selectedCell.map(x => possibleSumsOfARegion(x.getRegion)).getOrElse(Set[Array[Int]]())
 
   def resetGame(): Unit =
     this.getGrid.getGridCells.flatten.foreach( _.deleteValue())
@@ -46,12 +60,12 @@ class GameHandler(var selectedCell: Option[GridCell] = None, private var account
   // do I need this method? :
   // updateGame(button: Button) =
 
-  def updateSelection(x: Int, y: Int): Unit =
-    this.selectedCell = Some(this.getGridCells(x)(y))
+  def select(pos: (Int, Int)): Unit =
+    this.selectedPos = Some(pos)
     updateBubble()
 
-  def deleteSelection()              : Unit  =
-    this.selectedCell = None
+  def deselect()           : Unit =
+    this.selectedPos = None
     updateBubble()
 
   def         isGridFull    : Boolean = getGridCells.flatten.forall( _.isNonEmpty )
@@ -84,6 +98,19 @@ class GameHandler(var selectedCell: Option[GridCell] = None, private var account
     this.selectedCell.foreach( _.deleteValue() )
     updateBubble()
 
+  def prettyPrint(): String = {
+    this.getGridCells.grouped(3).map { bigGroup =>
+      bigGroup.map { row =>
+        row.grouped(3).map { smallGroup =>
+          smallGroup.map( _.getValue ).mkString(" ", " ", " ")
+        }.mkString("|", "|", "|")
+      }.mkString("\n")
+    }.mkString("+-------+-------+-------+\n", "\n+-------+-------+-------+\n", "\n+-------+-------+-------+") +
+      "\nAll the possible combinations, up to permutations: \n" + this.getBubble.map( _.mkString(" + ") ).mkString("\n")
+  }
+
+  def getValue: Int =
+    this.selectedCell.map( _.getValue ).getOrElse(0)
 end GameHandler
 
 object GameHandler:

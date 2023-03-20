@@ -3,7 +3,8 @@ class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], priva
     "There are either too many cells, too little cells, or the input value of one of them isn't in the interval [1, 9].")
   require(this.isTheColorOk,  "The color doesn't follow the standard format.")
   require(this.isContiguous,  "The region is not contiguous - there are some 'breaks' between the region's cells.")
-  require(this.isTheSumOk,    "The value of the sum is unattainable using " + this.getNumberOfCells + " cells." )
+  require(this.isTheSumOk,    "The value of the sum is unattainable using " + this.getNumberOfCells + " cells. The troubling cells " +
+    "are: " + this.getCells + " , and their sum is : " + this.getSum)
 
   def getCells: Set[(Int, Int)] = this.cells
 
@@ -27,7 +28,7 @@ class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], priva
       && (cells.foldLeft(Set[Int]()){case (acc, (x, y)) => acc + x + y}).forall( x => x >= 0 && x < 9 )
 
   private def isTheSumOk: Boolean = 
-    (this.getNumberOfCells * 1.5).toInt <= sum && sum <= (9 * this.getNumberOfCells) - (this.getNumberOfCells * 1.5).toInt
+    (this.getNumberOfCells * 1.5).toInt <= sum && sum <= (10 * this.getNumberOfCells) - (this.getNumberOfCells * 1.5).toInt
 
   private def isContiguous: Boolean =
     // Assumption that the set has at least 1 element
