@@ -1,13 +1,10 @@
-All the grid-related classes (i.e. Grid, GridRegion, GridCell) and their respective features have been implemented.
+Pretty much finished implementing the back-end.
 
-All the GridRegion & GridCell methods have been manually tested, albeit only on small example. No mistakes were found; however, unit-testing will be soon implemented to assure good functionality. The Grid class is yet to be tested.
-What possibly difficult errors have occurred and have they been resolved?
+The whole backend was manually tested through REPL. Unit tests are yet to be implemented.
 
-Specifically, in order to color the GridRegion objects, they have to be initialized with their respective color.
-However, knowing their respective colors require already knowing all the neighbourhood-relations, implying the objects have already been initialized.
-A simple solution (the one currently implemented) is to initialize all the GridRegion objects with a default white color and then to change colors on the go.
-Another possible solution is to check neighbourhoods on-the-go and to color them according to the neighbouring GridRegions that have so far been colored.
+Well, a lot of problems were met - but all were solved quite easily (or sometimes laboriously :) )
 
-5h :)
+I have no idea because I'm bad at time management.
+But I'd say about ~30h (?)
 
-Quite some busy 2 weeks because of exam week and then moving-in week, so didn't manage to do that much. But really looking forward to gaining more progress soon.
+Managed much more stuff than previously, but still a lot to do.

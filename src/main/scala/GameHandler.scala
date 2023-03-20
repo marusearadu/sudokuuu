@@ -14,17 +14,47 @@ private val X               = "x"
 private val Y               = "y"
 private val VALUE           = "value"
 
-class GameHandler(var selectedCell: Option[GridCell] = None, var accountingBubble: Set[Set[Int]] = Set(), private var grid: Grid):
-  def selectedRegion: Option[GridRegion] = this.selectedCell.map( _.getRegion )
+class GameHandler(var selectedCell: Option[GridCell] = None, private var accountingBubble: Set[Array[Int]] = Set(Array()), private var grid: Grid):
+  private def selectedRegion: Option[GridRegion] = this.selectedCell.map( _.getRegion )
 
-  def resetGame(): Unit = this.getGrid.getGridCells.flatten.foreach( _.deleteValue())
+  private def getPossibleSumsOfRegion(region: GridRegion): Set[Array[Int]] =
+    var possibleSums: Set[Array[Int]] = Set(Array())
+    val theCellValues = region.getCells.toArray.map( x => this.getGridCells(x._1)(x._2).getValue )
+    val emptyCells = theCellValues.filter( _ == 0 )
+    val emptyCellsSum = region.getSum - theCellValues.filter( _ != 0 ).sum
+
+    for i <- emptyCells.indices do
+      possibleSums = (1 to 9).toSet.flatMap( x => possibleSums.map( y => y ++ Array(x) ))
+
+    // possibleSums will have a lot of arrays that are identical up to a permutation
+    // to get rid of them, we just group them by their respective idential sets and choose a random element
+    possibleSums.groupBy( _.toSet ).map( (x, y) => y.head ).toSet
+
+  private def updateBubble(): Unit =
+    accountingBubble = this.selectedRegion.map(getPossibleSumsOfRegion).getOrElse(Set[Array[Int]]())
+
+  def resetGame(): Unit =
+    this.getGrid.getGridCells.flatten.foreach( _.deleteValue())
+    updateBubble()
 
   def getGrid: Grid = this.grid
 
   private def getGridCells = this.getGrid.getGridCells
-  //TODO: updateGame(button: Button) =
 
-  def isGridFull: Boolean = getGridCells.flatten.forall( _.isNonEmpty )
+  def getBubble: Set[Array[Int]] = this.accountingBubble
+
+  // do I need this method? :
+  // updateGame(button: Button) =
+
+  def updateSelection(x: Int, y: Int): Unit =
+    this.selectedCell = Some(this.getGridCells(x)(y))
+    updateBubble()
+
+  def deleteSelection()              : Unit  =
+    this.selectedCell = None
+    updateBubble()
+
+  def         isGridFull    : Boolean = getGridCells.flatten.forall( _.isNonEmpty )
 
   private def areRowsCorrect: Boolean = this.getGridCells.forall( _.toSet == (1 to 9).toSet )
 
@@ -44,20 +74,15 @@ class GameHandler(var selectedCell: Option[GridCell] = None, var accountingBubbl
       x => x.getCells.map( cell => this.getGridCells(cell._1)(cell._2).getValue ).sum == x.getSum
     )
 
-  def isGridCorrect: Boolean = isGridFull && areRowsCorrect && areColsCorrect && areSqrsCorrect && areRegsCorrect
-
-  //TODO: def updateSelection
+  def         isGridCorrect : Boolean = isGridFull && areRowsCorrect && areColsCorrect && areSqrsCorrect && areRegsCorrect
 
   def insertValue(newValue: Int): Unit =
     this.selectedCell.foreach( _.setValue(newValue) )
-    ???
+    updateBubble()
 
   def deleteValue(): Unit =
     this.selectedCell.foreach( _.deleteValue() )
-    ???
-
-  def updateBubble(): Unit =
-    ???
+    updateBubble()
 
 end GameHandler
 
