@@ -6,5 +6,12 @@ class Grid(private val gridCells: Array[Array[GridCell]], private val regions: A
   def getGridCells: Array[Array[GridCell]] = this.gridCells
   
   def getRegions: Array[GridRegion] = this.regions
+
+  override def equals(obj: Any): Boolean =
+    obj match
+      case grid: Grid =>
+        (grid.regions sameElements this.regions) &&
+          (grid.gridCells.flatten sameElements this.gridCells.flatten)
+      case _          => false
 end Grid
 

@@ -8,11 +8,6 @@ import scala.util.Random.nextInt
 import scala.collection.mutable.{Buffer, Set as MSet}
 
 // Some private variables used to read & write from file.
-private val NUMBER_OF_CELLS = "numberOfCells"
-private val REGION_SUM      = "regionSum"
-private val X               = "x"
-private val Y               = "y"
-private val VALUE           = "value"
 
 class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private var accountingBubble: Set[Array[Int]] = Set(Array()), private var grid: Grid):
   private def selectedCell: Option[GridCell] = this.selectedPos.map( x => this.getGridCells(x._1)(x._2) )
@@ -109,11 +104,17 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
       "\nAll the possible combinations, up to permutations: \n" + this.getBubble.map( _.mkString(" + ") ).mkString("\n")
   }
 
-  def getValue: Int =
-    this.selectedCell.map( _.getValue ).getOrElse(0)
+  def getValue: Any =
+    this.selectedCell.map(_.getValue).getOrElse("Please select a cell first.")
 end GameHandler
 
 object GameHandler:
+  private val NUMBER_OF_CELLS = "numberOfCells"
+  private val REGION_SUM      = "regionSum"
+  private val X               = "x"
+  private val Y               = "y"
+  private val VALUE           = "value"
+
   def loadGame(address: String): GameHandler =
     val gameGrid = (0 to 8).toArray.map( x => Array.ofDim[GridCell](9) )
     val setOfGridRegions = MSet[GridRegion]()
@@ -164,7 +165,10 @@ object GameHandler:
         setOfGridRegions += newGridRegion
         (cellPositions zip cellValues).foreach(((x, y) => gameGrid(x._1)(x._2) = GridCell(newGridRegion, y)))
 
-      returnGrid = Grid(gameGrid, colorGraph(setOfGridRegions.map( region => (region, region.getCells.flatMap(cell => gridRegionsNeighbouringACell(cell._1, cell._2)).diff(Set(region)) ) ).toMap))
+      returnGrid = Grid(
+        gameGrid, 
+        colorGraph(setOfGridRegions.map( region => (region, region.getCells.flatMap(cell => gridRegionsNeighbouringACell(cell._1, cell._2)).diff(Set(region)) ) ).toMap)
+      )
 
     catch
       case e: FileNotFoundException  => throw new BadFilePathException

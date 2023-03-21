@@ -52,4 +52,11 @@ class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], priva
 
   override def toString: String =
     "" + this.getNumberOfCells + " cells: {" + this.getCells.mkString("; ") + "} with sum " + this.getSum + " and color " + this.getColor + "."
+
+  override def equals(obj: Any): Boolean =
+    obj match
+      case region: GridRegion =>
+        (region.getSum == this.getSum)   &&
+          (region.getCells == this.getCells)
+      case _                  => false
 end GridRegion

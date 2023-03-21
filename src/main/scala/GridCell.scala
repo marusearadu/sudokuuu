@@ -19,5 +19,10 @@ class GridCell(private var region: GridRegion, private var value: Int = 0):
 
   override def toString: String =
     "A" + (if value != 0 then " GridCell with value " + this.value else "n empty Gridcell")
+
+  override def equals(obj: Any): Boolean =
+    obj match
+      case cell: GridCell => this.getValue == cell.getValue
+      case _              => false
 end GridCell
 
