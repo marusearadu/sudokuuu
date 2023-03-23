@@ -1,3 +1,5 @@
+import game.{GameHandler, GridRegion}
+
 import java.io.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.*
@@ -39,7 +41,7 @@ class gameBackendTest extends AnyFlatSpec with Matchers:
       )
     )
 
-  "GameHandler.loadGame(...)" should "load the regions of good JSON files properly. " in {
+  "game.GameHandler.loadGame(...)" should "load the regions of good JSON files properly. " in {
 
     for
       (path: String, regions: Array[GridRegion]) <- testData

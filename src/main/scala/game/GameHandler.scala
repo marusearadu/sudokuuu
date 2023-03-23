@@ -1,11 +1,13 @@
-import scala.io.Source.fromFile
-import java.io._
+package game
+
 import spray.json.*
-import DefaultJsonProtocol.*
+import spray.json.DefaultJsonProtocol.*
 import sun.jvm.hotspot.debugger.Address
 
-import scala.util.Random.nextInt
+import java.io.*
 import scala.collection.mutable.{Buffer, Set as MSet}
+import scala.io.Source.fromFile
+import scala.util.Random.nextInt
 
 // Some private variables used to read & write from file.
 

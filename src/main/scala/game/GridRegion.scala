@@ -1,3 +1,5 @@
+package game
+
 class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], private var color: String = "#FFFFFF"):
   require(this.areTheCellsOK, 
     "There are either too many cells, too little cells, or the input value of one of them isn't in the interval [1, 9].")

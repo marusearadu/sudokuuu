@@ -1,3 +1,5 @@
+package game
+
 class Grid(private val gridCells: Array[Array[GridCell]], private val regions: Array[GridRegion]):
   private def getOptionCellAtPos(pos: (Int, Int)): Option[GridCell] = gridCells.lift(pos._1).flatMap( _.lift(pos._2) )
 
