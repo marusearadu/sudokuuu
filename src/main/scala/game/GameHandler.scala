@@ -116,8 +116,12 @@ object GameHandler:
   private val X               = "x"
   private val Y               = "y"
   private val VALUE           = "value"
+  private var currentAddress: String = null
+  
+  def getAddress: String = this.currentAddress
 
   def loadGame(address: String): GameHandler =
+    currentAddress = address
     val gameGrid = (0 to 8).toArray.map( x => Array.ofDim[GridCell](9) )
     val setOfGridRegions = MSet[GridRegion]()
     var returnGrid: Grid = null
@@ -151,7 +155,7 @@ object GameHandler:
       neighbours.flatten.toSet
 
     try
-      val buff = fromFile(address)
+      val buff = fromFile(currentAddress)
       val jsonObject = buff.mkString.parseJson.convertTo[Vector[Map[String, Int]]]
       buff.close()
 
@@ -181,7 +185,7 @@ object GameHandler:
       case e: Exception              => throw new UnknownException("Unknown exception occured: \n" + e)
     if returnGrid == null then throw new CorruptedFileException("Corrupt JSON file. \n") else GameHandler(grid = returnGrid)
 
-  def saveGame(address: String, game: GameHandler): Unit =
+  def saveGame(game: GameHandler, address: String = this.currentAddress): Unit =
     def makeMap(x: Int, y: Int, z: Int): Map[String, Int] = Map(X + z -> x, Y + z -> y, VALUE + z -> game.getGrid.getGridCells(x)(y).getValue)
 
     try
