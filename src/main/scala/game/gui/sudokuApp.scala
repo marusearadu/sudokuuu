@@ -2,13 +2,14 @@ package game.gui
 
 import game.{BadFilePathException, CorruptedFileException, GameHandler, UnknownException}
 import scalafx.application.JFXApp3
-import scalafx.Includes._
+import scalafx.Includes.*
 import scalafx.scene.Scene
 import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, GridPane, Pane, Region, StackPane}
 import scalafx.scene.paint.Color.*
 import scalafx.scene.control.{Alert, ButtonType, Label, Menu, MenuBar, MenuItem}
 import scalafx.geometry.Insets
 import scalafx.scene.input.{KeyCombination, MouseEvent}
+import scalafx.scene.paint.Color
 import scalafx.stage.{FileChooser, Stage}
 import scalafx.scene.text.{Font, FontWeight, Text}
 
@@ -16,8 +17,10 @@ object sudokuApp extends JFXApp3:
   private val fileChooser = new FileChooser
   fileChooser.getExtensionFilters.add(new FileChooser.ExtensionFilter("JSON Files Only", "*.json"))
   private val WINDOW_WIDTH  = 800
-  private val WINDOW_HEIGHT = 540
+  private val WINDOW_HEIGHT = 600
+  private val SQUARE_SIZE   = 50
   private var gameHandler: GameHandler = _
+  private var theSquares: Array[Array[StackPane]] = _
 
   override def start(): Unit =
     stage = new JFXApp3.PrimaryStage:
@@ -31,9 +34,9 @@ object sudokuApp extends JFXApp3:
 
     val root = new BorderPane:
       top    = setUpMenuBar()
-      bottom = new Pane()          // TODO: IMPLEMENT THE BUTTONS
-      right  = new Pane()          // TODO: IMPLEMENT THE ACCOUNTING BUBBLE
-      left   = new Pane()          // TODO: PADDING (?)
+      bottom = new Pane()
+      right  = new Pane()
+      left   = new Pane()
       center = new StackPane{
         children = List(new Text("To start a game, double click here or go 'Game > Open...' and select a file."){font = Font("Times New Roman", FontWeight.Normal, 20)})
         onMouseClicked =
@@ -73,8 +76,12 @@ object sudokuApp extends JFXApp3:
     menuBar.background = Background(Array(new BackgroundFill((Gray), CornerRadii.Empty, Insets.Empty)))
     menuBar
 
-  // TODO: FINISH THIS FUNCTION
-  private def setUpBoard(): GridPane =
+  private def handleColor(color: String): Color =
+    require(color.length == 7, "Can't process the color")
+    val values = color.tail.grouped(2).map( x => x(0).asDigit * 16 + x(1).asDigit ).toArray
+    Color.rgb(values(0), values(1), values(2))
+
+  private def setUpBoard(): (GridPane, Array[Array[StackPane]]) =
     def getBorderWidths(i: Int, j: Int): BorderWidths =
       new BorderWidths(
         if i % 3 == 0 then 3 else 2,
@@ -82,27 +89,43 @@ object sudokuApp extends JFXApp3:
         if i % 3 == 2 then 3 else 2,
         if j % 3 == 0 then 3 else 2
       )
-
     val boardSquare = new GridPane()
+    var boardSquareArray = (0 to 8).toArray.map( x => Array.ofDim[StackPane](9) )
     for
       i <- (0 to 8)
       j <- (0 to 8)
     do
       val smallSquare = new StackPane
-      val insideText = new Text(i.toString):
+      val inside      = gameHandler.getGrid.getGridCells(j)(i).getValue
+      val insideText  = new Text(if inside == 0 then " " else inside.toString):
         font = Font("Niagara Solid", FontWeight.SemiBold, 30)
       val smallSquareVisual = new Region:
-        minWidth = 50
-        maxWidth = 50
-        minHeight = 50
-        maxHeight = 50
-        background = Background(Array(new BackgroundFill((Red), CornerRadii.Empty, Insets.Empty)))
+        minWidth  = SQUARE_SIZE
+        maxWidth  = SQUARE_SIZE
+        minHeight = SQUARE_SIZE
+        maxHeight = SQUARE_SIZE
+        background = Background(Array(new BackgroundFill(
+          (handleColor(gameHandler.getGrid.getRegionsMap((i, j)))),
+          CornerRadii.Empty,
+          Insets.Empty)))
       smallSquareVisual.border = new Border(new BorderStroke(Black, Black, Black, Black,
         BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid,
-        CornerRadii.Empty, getBorderWidths(j, i), Insets.Empty))
+        CornerRadii.Empty, getBorderWidths(i, j), Insets.Empty))
       smallSquare.children ++= Seq(smallSquareVisual, insideText)
-      boardSquare.add(smallSquare, i, j)
-    boardSquare
+      boardSquare.add(smallSquare, j, i)
+//      smallSquare.onMouseClicked = (event: MouseEvent) => println("Ouch " + i + " and " + j)
+      boardSquareArray(i)(j) = smallSquare
+    for
+      (x, y) <- gameHandler.getGrid.getRegions.map( region => region.getCells.minBy((_ + _)) )
+    do
+      val anchor = new AnchorPane
+      val text   = new Text(gameHandler.getGrid.getGridCells(x)(y).getRegion.getSum.toString):
+        font = Font("Niagara Solid", FontWeight.Normal, 15)
+      anchor.children += text
+      AnchorPane.setTopAnchor(text, 5)
+      AnchorPane.setLeftAnchor(text, 5)
+      boardSquareArray(x)(y).children += anchor
+    (boardSquare, boardSquareArray)
 
   private def pushDialogue(stage: Stage, dialogueType: Alert.AlertType, alertTitle: String, header: String, description: String): Option[ButtonType] =
     new Alert(dialogueType) {
@@ -138,8 +161,10 @@ object sudokuApp extends JFXApp3:
           bottom = new Pane()          // TODO: IMPLEMENT THE BUTTONS
           right  = new Pane()          // TODO: IMPLEMENT THE ACCOUNTING BUBBLE
           left   = new Pane()          // TODO: PADDING (?)
-          center = setUpBoard()
-        stage.scene = new Scene(parent = newRoot)
+        val setUpBoardResult = setUpBoard()
+        newRoot.center = setUpBoardResult._1
+        theSquares     = setUpBoardResult._2
+        stage.scene    = new Scene(parent = newRoot)
     catch
       case e: BadFilePathException   => pushDialogue(stage, Alert.AlertType.Error, "Error", "Bad File Path" , e.getMessage)
       case e: CorruptedFileException => pushDialogue(stage, Alert.AlertType.Error, "Error", "Corrupted File", e.description)

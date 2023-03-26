@@ -54,9 +54,6 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
 
   def getBubble: Set[Array[Int]] = this.accountingBubble
 
-  // do I need this method? :
-  // updateGame(button: Button) =
-
   def select(pos: (Int, Int)): Unit =
     this.selectedPos = Some(pos)
     updateBubble()
@@ -126,7 +123,7 @@ object GameHandler:
     val setOfGridRegions = MSet[GridRegion]()
     var returnGrid: Grid = null
 
-    def colorGraph(graph: Map[GridRegion, Set[GridRegion]]): Array[GridRegion] =
+    def colorGraph(graph: Map[GridRegion, Set[GridRegion]]): Map[(Int, Int), String] =
       val colors: Buffer[String] = Buffer[String]("#" + (0 until 6).map( x => nextInt(15).toHexString ).mkString)
       val gridRegionList = graph.keys.toArray
       gridRegionList.head.setColor(colors.head)
@@ -143,7 +140,8 @@ object GameHandler:
         else
           gridRegion.setColor(colors.diff(colorsUsedByNow).head)
 
-      gridRegionList
+      gridRegionList.map(region => region.getCells -> region.getColor)
+        .map( ((x, y) => x.map(each => each -> y)) ).toSet.flatten.toMap
 
     def gridRegionsNeighbouringACell(x: Int, y: Int): Set[GridRegion] =
       var neighbours = MSet[Option[GridRegion]]()
@@ -194,7 +192,7 @@ object GameHandler:
           region =>
             region.getCells.zipWithIndex.map(((pos, z) => makeMap(pos._1, pos._2, z))).reduce((x, y) => x ++ y) ++
               Map(REGION_SUM -> region.getSum, NUMBER_OF_CELLS -> region.getNumberOfCells)
-        )
+        ).toArray
       val jsonPrint = vectorOfRegions.toJson.prettyPrint
       val file = new File(address)
       val bufferedWriter = new BufferedWriter(new FileWriter(file))
