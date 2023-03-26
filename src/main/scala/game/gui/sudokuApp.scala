@@ -1,78 +1,70 @@
 package game.gui
 
-import scalafx.Includes.*
+import game.{BadFilePathException, CorruptedFileException, GameHandler, UnknownException}
 import scalafx.application.JFXApp3
+import scalafx.Includes._
 import scalafx.scene.Scene
-import scalafx.scene.layout.{Background, BackgroundFill, ColumnConstraints, CornerRadii, GridPane, HBox, Pane, RowConstraints, VBox}
+import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, GridPane, Pane, Region, StackPane}
 import scalafx.scene.paint.Color.*
-import scalafx.scene.control.{Menu, MenuBar, MenuItem}
-import game.GameHandler
+import scalafx.scene.control.{Alert, ButtonType, Label, Menu, MenuBar, MenuItem}
 import scalafx.geometry.Insets
-import scalafx.scene.canvas.Canvas
-import scalafx.scene.input.KeyCombination
+import scalafx.scene.input.{KeyCombination, MouseEvent}
+import scalafx.stage.{FileChooser, Stage}
+import scalafx.scene.text.{Font, FontWeight, Text}
 
 object sudokuApp extends JFXApp3:
-  private var gameHandler: GameHandler = null
+  private val fileChooser = new FileChooser
+  fileChooser.getExtensionFilters.add(new FileChooser.ExtensionFilter("JSON Files Only", "*.json"))
+  private val WINDOW_WIDTH  = 800
+  private val WINDOW_HEIGHT = 540
+  private var gameHandler: GameHandler = _
 
-  def getGameHandler: GameHandler = this.gameHandler
-  def setGameHandler(newGameHandler: GameHandler) = gameHandler = newGameHandler
   override def start(): Unit =
     stage = new JFXApp3.PrimaryStage:
-      title = "Killer Sudoku"
-      width = 800
-      height = 540
+      title     = "Hello Stage"
+      width     = WINDOW_WIDTH
+      height    = WINDOW_HEIGHT
+      minWidth  = WINDOW_WIDTH
+      maxWidth  = WINDOW_WIDTH
+      minHeight = WINDOW_HEIGHT
+      maxHeight = WINDOW_HEIGHT
 
-    val root = Pane()
-    val scene = Scene(parent = root)
-    stage.scene = scene
+    val root = new BorderPane:
+      top    = setUpMenuBar()
+      bottom = new Pane()          // TODO: IMPLEMENT THE BUTTONS
+      right  = new Pane()          // TODO: IMPLEMENT THE ACCOUNTING BUBBLE
+      left   = new Pane()          // TODO: PADDING (?)
+      center = new StackPane{
+        children = List(new Text("To start a game, double click here or go 'Game > Open...' and select a file."){font = Font("Times New Roman", FontWeight.Normal, 20)})
+        onMouseClicked =
+          (event: MouseEvent) => if event.clickCount == 2 then loadGame()
+      }
 
-//    val bottomBox = new HBox
-//    val sideBox   = new VBox
-//    val canvas    = new Canvas(400, 400)
+    stage.scene = new Scene(parent = root, WINDOW_WIDTH, WINDOW_HEIGHT)
 
-    root.children += setUpMenuBar()
-//    root.children += mainView
-//    mainView.add(canvas   , 0, 0)
-//    mainView.add(sideBox  , 1, 0)
-//    mainView.add(bottomBox, 0, 1, 2, 1)
-
-//    val column0 = new ColumnConstraints:
-//      percentWidth = 65
-//    val column1 = new ColumnConstraints:
-//      percentWidth = 35
-////    val row0    = new RowConstraints:
-////      percentHeight = 6
-//    val row1    = new RowConstraints:
-//      percentHeight = 70
-//    val row2    = new RowConstraints:
-//      percentHeight = 20
-//
-//    mainView.columnConstraints = Array[ColumnConstraints](column0, column1)
-//    mainView.rowConstraints    = Array[RowConstraints](row1, row2)
-
-  private def setUpMenuBar(): MenuBar =
+  private def setUpMenuBar(): MenuBar  =
     val menuBar = new MenuBar{
       menus = Seq(
         new Menu("Game"){
           items = Seq(
-            new MenuItem("Open new game"){
-              onAction = (event) => helperFunctions.loadGame()
+            new MenuItem("Open..."){
+              onAction = (event) => loadGame()
               accelerator = KeyCombination.keyCombination("Ctrl + O")
             },
             new MenuItem("Save game"){
-              onAction = (event) => helperFunctions.saveGame()
+              onAction = (event) => saveGame()
               accelerator = KeyCombination.keyCombination("Ctrl + S")
             },
             new MenuItem("Save to..."){
-              onAction = (event) => helperFunctions.saveGame(false)
+              onAction = (event) => saveGame(false)
             },
             new MenuItem("Reset progress"){
+              onAction = (event) => resetGame()
               accelerator = KeyCombination.keyCombination("Ctrl + R")
-              onAction = (event) => helperFunctions.resetGame()
             },
             new MenuItem("Exit"){
+              onAction = (event) => exitGame()
               accelerator = KeyCombination.keyCombination("Ctrl + X")
-              onAction = (event) => helperFunctions.exitGame()
             }
           )
         }
@@ -81,4 +73,104 @@ object sudokuApp extends JFXApp3:
     menuBar.background = Background(Array(new BackgroundFill((Gray), CornerRadii.Empty, Insets.Empty)))
     menuBar
 
+  // TODO: FINISH THIS FUNCTION
+  private def setUpBoard(): GridPane =
+    def getBorderWidths(i: Int, j: Int): BorderWidths =
+      new BorderWidths(
+        if i % 3 == 0 then 3 else 2,
+        if j % 3 == 2 then 3 else 2,
+        if i % 3 == 2 then 3 else 2,
+        if j % 3 == 0 then 3 else 2
+      )
+
+    val boardSquare = new GridPane()
+    for
+      i <- (0 to 8)
+      j <- (0 to 8)
+    do
+      val smallSquare = new StackPane
+      val insideText = new Text(i.toString):
+        font = Font("Niagara Solid", FontWeight.SemiBold, 30)
+      val smallSquareVisual = new Region:
+        minWidth = 50
+        maxWidth = 50
+        minHeight = 50
+        maxHeight = 50
+        background = Background(Array(new BackgroundFill((Red), CornerRadii.Empty, Insets.Empty)))
+      smallSquareVisual.border = new Border(new BorderStroke(Black, Black, Black, Black,
+        BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid,
+        CornerRadii.Empty, getBorderWidths(j, i), Insets.Empty))
+      smallSquare.children ++= Seq(smallSquareVisual, insideText)
+      boardSquare.add(smallSquare, i, j)
+    boardSquare
+
+  private def pushDialogue(stage: Stage, dialogueType: Alert.AlertType, alertTitle: String, header: String, description: String): Option[ButtonType] =
+    new Alert(dialogueType) {
+      initOwner(stage)
+      title = alertTitle
+      headerText = header
+      contentText = description
+    }.showAndWait()
+
+  private def saveGame(samePlace: Boolean = true) =
+    if gameHandler != null then
+      try
+        if GameHandler.getAddress != null && samePlace then
+          GameHandler.saveGame(gameHandler)
+        else
+          val selectedLocation = fileChooser.showSaveDialog(stage)
+          if selectedLocation != null then
+            GameHandler.saveGame(gameHandler, selectedLocation.toString)
+      catch
+        case e: UnknownException => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown exception", e.description)
+        case e: Exception        => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown exception", e.getMessage)
+    else
+      pushDialogue(stage, Alert.AlertType.Warning, "Warning!", "Can't save an empty game.",
+        "Please first open a game in order to save it.")
+
+  private def loadGame() =
+    try
+      val selectedFile = fileChooser.showOpenDialog(stage)
+      if selectedFile != null then
+        gameHandler = GameHandler.loadGame(selectedFile.toString)
+        val newRoot = new BorderPane:
+          top    = setUpMenuBar()
+          bottom = new Pane()          // TODO: IMPLEMENT THE BUTTONS
+          right  = new Pane()          // TODO: IMPLEMENT THE ACCOUNTING BUBBLE
+          left   = new Pane()          // TODO: PADDING (?)
+          center = setUpBoard()
+        stage.scene = new Scene(parent = newRoot)
+    catch
+      case e: BadFilePathException   => pushDialogue(stage, Alert.AlertType.Error, "Error", "Bad File Path" , e.getMessage)
+      case e: CorruptedFileException => pushDialogue(stage, Alert.AlertType.Error, "Error", "Corrupted File", e.description)
+      case e: UnknownException       => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown Exception", e.description)
+      case e: Exception              => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown Exception", e.getMessage)
+
+  private def resetGame() =
+    try
+      gameHandler.resetGame()
+    catch
+      case e: NullPointerException => pushDialogue(stage, Alert.AlertType.Warning, "Warning!", "Can't reset an empty game.",
+            "Please first open a game in order to reset it.")
+      case e: Exception              => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unkwonn Exception", e.getMessage)
+
+  private def exitGame() =
+    if gameHandler == null then
+      stage.close()
+    else
+      val buttonSaveTo = new ButtonType("Save, then exit")
+      val buttonExit   = new ButtonType("Exit without saving")
+      new Alert(Alert.AlertType.Confirmation){
+        initOwner(stage)
+        title = "Confirm Exit"
+        headerText = "Do you want to save your game before exiting?"
+        buttonTypes = Seq(buttonSaveTo, buttonExit, ButtonType.Cancel)
+      }.showAndWait() match
+        case Some(`buttonSaveTo`) =>
+          saveGame(false)
+          stage.close()
+        case Some(`buttonExit`)   =>
+          stage.close()
+        case _                  =>
+          ()
 end sudokuApp
