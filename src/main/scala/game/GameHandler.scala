@@ -58,10 +58,6 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
     this.selectedPos = Some(pos)
     updateBubble()
 
-  def deselect()           : Unit =
-    this.selectedPos = None
-    updateBubble()
-
   def         isGridFull    : Boolean = getGridCells.flatten.forall( _.isNonEmpty )
 
   private def areRowsCorrect: Boolean = this.getGridCells.forall( _.toSet == (1 to 9).toSet )
@@ -124,7 +120,7 @@ object GameHandler:
     var returnGrid: Grid = null
 
     def colorGraph(graph: Map[GridRegion, Set[GridRegion]]): Map[(Int, Int), String] =
-      val colors: Buffer[String] = Buffer[String]("#" + (0 until 6).map( x => nextInt(15).toHexString ).mkString)
+      val colors: Buffer[String] = Buffer[String]("#e5de00", "#e3242b", "#1338be", "#a45ee5")
       val gridRegionList = graph.keys.toArray
       gridRegionList.head.setColor(colors.head)
 
