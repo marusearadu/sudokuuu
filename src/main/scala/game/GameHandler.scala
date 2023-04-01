@@ -30,18 +30,17 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
     possibleSums.filter( _.sum == emptyCellsSum ).groupBy( _.toSet ).map( (x, y) => y.head.sorted ).toSet
 
   // some random bug appeared once but can't be repeated, i don't know why but i really do hope it was a special instance of me being stupid
-  def possibleValuesAt(pos: (Int, Int)) =
-    val valuesInThe3Square = this.getGridCells.slice( (pos._1 / 3) * 3, (pos._1 / 3) * 3 + 3 )
-      .flatMap( x => x.slice( (pos._2 / 3) * 3, (pos._2 / 3) * 3 + 3) )
-      .map( _.getValue )
+  def possibleValuesAt(pos: (Int, Int)): Set[Int] =
+    val valuesInThe3Square = this.getGridCells.slice((pos._1 / 3) * 3, (pos._1 / 3) * 3 + 3)
+      .flatMap(x => x.slice((pos._2 / 3) * 3, (pos._2 / 3) * 3 + 3))
+      .map(_.getValue)
       .toSet
-    val valuesInTheRow = this.getGridCells(pos._1).map( _.getValue).toSet
-    val valuesInTheColumn = this.getGridCells.map( _(pos._2).getValue ).toSet
+    val valuesInTheRow = this.getGridCells(pos._1).map(_.getValue).toSet
+    val valuesInTheColumn = this.getGridCells.map(_(pos._2).getValue).toSet
     val takenValues = valuesInTheRow.union(valuesInTheColumn).union(valuesInThe3Square)
 
-    this.selectedCell
-      .map( x => this.possibleSumsOfARegion(x.getRegion).flatMap( _.toSet) ).getOrElse( Set[Int]() ) // getting all the possible values in this region according to possibleSumsOfARegion
-      .diff(takenValues)
+    this.possibleSumsOfARegion(this.getGridCells(pos._1)(pos._2).getRegion).flatMap(_.toSet).diff(takenValues) // getting all the possible values in this region according to possibleSumsOfARegion
+
 
   def getBubble: Set[Array[Int]] =
     this.selectedCell.map(x => possibleSumsOfARegion(x.getRegion)).getOrElse(Set[Array[Int]]())
@@ -84,7 +83,8 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
   def deleteValue(): Unit                =
     this.selectedCell.foreach( _.deleteValue() )
 
-  def prettyPrint(): String = {
+  // un-make this function private in order to easily test in the sbt console
+  private def prettyPrint(): String = {
     this.getGridCells.grouped(3).map { bigGroup =>
       bigGroup.map { row =>
         row.grouped(3).map { smallGroup =>

@@ -3,7 +3,7 @@ package game.gui
 import game.{BadFilePathException, CorruptedFileException, GameHandler, GridCell, UnknownException}
 import scalafx.application.{JFXApp3, Platform}
 import scalafx.Includes.*
-import scalafx.beans.property.{IntegerProperty, ObjectProperty}
+import scalafx.beans.property.{IntegerProperty, ObjectProperty, ReadOnlyObjectWrapper}
 import scalafx.scene.{Group, Scene}
 import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, GridPane, Pane, Region, StackPane, TilePane, VBox}
 import scalafx.scene.paint.Color.*
@@ -19,17 +19,29 @@ import javafx.beans.property.SimpleObjectProperty
 import scala.language.postfixOps
 
 object sudokuApp extends JFXApp3:
-  private val fileChooser              = new FileChooser
+  // now i do realize that probably just inserting
+  // the whole GameHandler object into an ObjectProperty
+  // would probably boost efficiency
+  // however, one needs to self-handedly implement a listener
+  // so that when the internal state of gameHandler changes
+  // it fires some event
+  // AND THERE'S PRACTICALLY NO DOCUMENTATION ON THIS TOPIC WHATSOEVER
+  // and, well
+  // too big of a pain to discover this
+  // so damn it
+  private val fileChooser                  = new FileChooser
   fileChooser.getExtensionFilters.add(new FileChooser.ExtensionFilter("JSON Files Only", "*.json"))
-  private val selectedPos              = ObjectProperty((-1, -1))
-  private val bubbleSums               = ObjectProperty(Set[Array[Int]]())
-  private val WINDOW_WIDTH             = 960
-  private val WINDOW_HEIGHT            = 720
-  private val SQUARE_SIZE              = 50
-  private var gameHandler: GameHandler = _
+  private val selectedPos                  = ObjectProperty((-1, -1))
+  private val bubbleSums                   = ObjectProperty(Set[Array[Int]]())
+  private val valuesInTheSquare: Array[Array[IntegerProperty]] = ( (0 until 9).map( i => (0 until 9).map( j => IntegerProperty(0) ).toArray ).toArray )
+  private val WINDOW_WIDTH                 = 960
+  private val WINDOW_HEIGHT                = 720
+  private val SQUARE_SIZE                  = 50
+  private var gameHandler: GameHandler     = _
+  private var numberedButtons: Seq[Button] = _
 
-  // TODO: color the whole background in one color
-  //  and change cells coloring
+  // TODO: SWITCH UP GAME COLORING
+  //  ... and add handler events for when user presses a digit
   override def start(): Unit =
     stage = new JFXApp3.PrimaryStage:
       title     = "Killer Sudoku"
@@ -100,23 +112,27 @@ object sudokuApp extends JFXApp3:
       i <- (0 to 8)
       j <- (0 to 8)
     do
+      valuesInTheSquare(i)(j).value = gameHandler.getGrid.getGridCells(j)(i).getValue
+      val insideText  = new Text(if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString):
+        font = Font("Niagara Solid", FontWeight.SemiBold, 30)
+      valuesInTheSquare(i)(j).onChange( (_, _, newValue) => insideText.text = if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString)
+
       val smallSquare = new StackPane:
-        onMouseClicked = (event) =>
+        style     <== when(selectedPos === (i, j)) choose "-fx-background-color: green;" otherwise "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
+        onMouseEntered = (_) =>
+          gameHandler.possibleValuesAt((i, j)).foreach( i => numberedButtons(i - 1).style = "-fx-background-color: yellow ;")
+          println("Possible values at " + (i, j) + " are: " + gameHandler.possibleValuesAt((i, j)))
+        onMouseExited  = (_) => gameHandler.possibleValuesAt((i, j)).foreach( i => numberedButtons(i - 1).style = "-fx-background-color: #b8c6db;")
+        onMouseClicked = (_) =>
           gameHandler.select((i, j))
           bubbleSums.value  = gameHandler.getBubble
           selectedPos.value = (i, j)
-
-      val inside      = ObjectProperty(gameHandler.getGrid.getGridCells(j)(i).getValue)
-      val insideText  = new Text(if inside.value == 0 then " " else inside.value.toString):
-        font = Font("Niagara Solid", FontWeight.SemiBold, 30)
-      inside.onChange((_, _, newValue) => gameHandler.getGrid.getGridCells(j)(i).setValue(newValue))
 
       val smallSquareVisual = new Region:
         minWidth  = SQUARE_SIZE
         maxWidth  = SQUARE_SIZE
         minHeight = SQUARE_SIZE
         maxHeight = SQUARE_SIZE
-        style     <== when(selectedPos === (i, j)) choose "-fx-background-color: green;" otherwise "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
       smallSquareVisual.border = new Border(new BorderStroke(Black, Black, Black, Black,
         BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid,
         CornerRadii.Empty, getBorderWidths(i, j), Insets.Empty))
@@ -136,26 +152,23 @@ object sudokuApp extends JFXApp3:
       boardSquareArray(x)(y).children += anchor
     boardSquare
 
-  // TODO: link the buttons to the methods
-  //   and set up the padding/margin values as private vals
-  //   and set up button coloring on cell hovering
+  // TODO: add a 'check board button' to the game
+  //   set up the padding/margin values as private vals
   private def setUpBottom(): TilePane =
     val buttons = new TilePane:
       margin  = Insets(10)
-    for i <- 1 to 9 do
-      val nrButton = new Button(i.toString):
-        padding = Insets(10)
-        onAction =
-          (_) =>
-            gameHandler.insertValue(i)
-            println("changed cell")
-      buttons.children += nrButton
+      children = numberedButtons
     buttons.children += new Button("Delete entry"):
-      padding = Insets(10, 0, 10, 0)
+      padding = Insets(10, 2, 10, 2)
       margin  = Insets(0, 0, 0, 20)
+      onAction =
+        (event) =>
+          gameHandler.deleteValue()
+          valuesInTheSquare(selectedPos.value._1)(selectedPos.value._2).value = 0
+          bubbleSums.value = gameHandler.getBubble
     buttons
 
-  // prety much done?
+  // TODO: CHANGE THE TITLE, EXPLAINIG ALL WE HAVE IS STUPID VARIABLES
   private def setUpBubble(): StackPane =
     val bubbleVisual = new Region:
       minWidth = 400
@@ -223,6 +236,12 @@ object sudokuApp extends JFXApp3:
       val selectedFile = fileChooser.showOpenDialog(stage)
       if selectedFile != null then
         gameHandler = GameHandler.loadGame(selectedFile.toString)
+        numberedButtons = (1 to 9).toSeq.map( i => new Button(i.toString){
+          padding = Insets(10)
+          onAction = ((_) => {
+            gameHandler.insertValue(i)
+            valuesInTheSquare(selectedPos.value._1)(selectedPos.value._2).value = i
+            bubbleSums.value = gameHandler.getBubble})})
 
         val myBorderPane = stage.scene.getValue.lookup("#abecedar").asInstanceOf[javafx.scene.layout.BorderPane]
         myBorderPane.center = setUpBoard()
