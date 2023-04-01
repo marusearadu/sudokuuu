@@ -1,5 +1,7 @@
 package game
 
+import javafx.beans.{InvalidationListener, Observable}
+import scalafx.beans.value.ObservableValue
 import spray.json.*
 import spray.json.DefaultJsonProtocol.*
 import sun.jvm.hotspot.debugger.Address
@@ -79,7 +81,7 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
   def   insertValue(newValue: Int): Unit =
     this.selectedCell.foreach( _.setValue(newValue) )
 
-  def deleteValue(): Unit =
+  def deleteValue(): Unit                =
     this.selectedCell.foreach( _.deleteValue() )
 
   def prettyPrint(): String = {
