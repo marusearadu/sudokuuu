@@ -1,33 +1,35 @@
 package game.gui
 
-import game.{BadFilePathException, CorruptedFileException, GameHandler, UnknownException}
+import game.{BadFilePathException, CorruptedFileException, GameHandler, GridCell, UnknownException}
 import scalafx.application.{JFXApp3, Platform}
 import scalafx.Includes.*
-import scalafx.beans.property.IntegerProperty
-import scalafx.scene.Scene
+import scalafx.beans.property.{IntegerProperty, ObjectProperty}
+import scalafx.scene.{Group, Scene}
 import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, GridPane, Pane, Region, StackPane, TilePane, VBox}
 import scalafx.scene.paint.Color.*
-import scalafx.scene.control.{Alert, Button, ButtonType, Label, Menu, MenuBar, MenuItem, ScrollPane}
+import scalafx.scene.control.{Alert, Button, ButtonType, Label, Menu, MenuBar, MenuItem, ScrollPane, TextArea}
 import scalafx.geometry.{Insets, Pos}
 import scalafx.scene.input.{KeyCombination, MouseEvent}
 import scalafx.scene.paint.Color
+import scalafx.scene.shape.Rectangle
 import scalafx.stage.{FileChooser, Stage}
-import scalafx.scene.text.{Font, FontWeight, Text}
+import scalafx.scene.text.{Font, FontWeight, Text, TextFlow}
+import javafx.beans.property.SimpleObjectProperty
 
 import scala.language.postfixOps
 
 object sudokuApp extends JFXApp3:
-  private val fileChooser = new FileChooser
-  private val selectedX   = IntegerProperty(-1)
-  private val selectedY   = IntegerProperty(-1)
+  private val fileChooser              = new FileChooser
   fileChooser.getExtensionFilters.add(new FileChooser.ExtensionFilter("JSON Files Only", "*.json"))
-  private val WINDOW_WIDTH  = 960
-  private val WINDOW_HEIGHT = 720
-  private val SQUARE_SIZE   = 50
-  private var gameHandler: GameHandler = _
+  private val selectedPos              = ObjectProperty((-1, -1))
+  private val bubbleSums               = ObjectProperty(Set[Array[Int]]())
+  private val WINDOW_WIDTH             = 960
+  private val WINDOW_HEIGHT            = 720
+  private val SQUARE_SIZE              = 50
+  private var gameHandler: SimpleObjectProperty[GameHandler] = _
 
   // TODO: color the whole background in one color
-  //  and change the cell coloring
+  //  and change cells coloring
   override def start(): Unit =
     stage = new JFXApp3.PrimaryStage:
       title     = "Killer Sudoku"
@@ -100,30 +102,33 @@ object sudokuApp extends JFXApp3:
     do
       val smallSquare = new StackPane:
         onMouseClicked = (event) =>
-          selectedX.value = i
-          selectedY.value = j
-          gameHandler.select((i, j))
-      val inside      = gameHandler.getGrid.getGridCells(j)(i).getValue
-      val insideText  = new Text(if inside == 0 then " " else inside.toString):
+          gameHandler.value.select((i, j))
+          bubbleSums.value  = gameHandler.value.getBubble
+          selectedPos.value = (i, j)
+
+      val inside      = ObjectProperty(gameHandler.value.getGrid.getGridCells(j)(i).getValue)
+      val insideText  = new Text(if inside.value == 0 then " " else inside.value.toString):
         font = Font("Niagara Solid", FontWeight.SemiBold, 30)
+      inside.onChange((_, _, newValue) => gameHandler.value.getGrid.getGridCells(j)(i).setValue(newValue))
+
       val smallSquareVisual = new Region:
         minWidth  = SQUARE_SIZE
         maxWidth  = SQUARE_SIZE
         minHeight = SQUARE_SIZE
         maxHeight = SQUARE_SIZE
-        style     <== when(selectedX === i && selectedY === j) choose "-fx-background-color: green;" otherwise "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
+        style     <== when(selectedPos === (i, j)) choose "-fx-background-color: green;" otherwise "-fx-background-color: " + gameHandler.value.getGrid.getRegionsMap((i, j)) + ";"
       smallSquareVisual.border = new Border(new BorderStroke(Black, Black, Black, Black,
         BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid,
         CornerRadii.Empty, getBorderWidths(i, j), Insets.Empty))
+
       smallSquare.children ++= Seq(smallSquareVisual, insideText)
       boardSquare.add(smallSquare, j, i)
-//      smallSquare.onMouseClicked = (event: MouseEvent) => println("Ouch " + i + " and " + j)
       boardSquareArray(i)(j) = smallSquare
     for
-      (x, y) <- gameHandler.getGrid.getRegions.map( region => region.getCells.minBy((_ + _)) )
+      (x, y) <- gameHandler.value.getGrid.getRegions.map( region => region.getCells.minBy((_ + _)) )
     do
       val anchor = new AnchorPane
-      val text   = new Text(gameHandler.getGrid.getGridCells(x)(y).getRegion.getSum.toString):
+      val text   = new Text(gameHandler.value.getGrid.getGridCells(x)(y).getRegion.getSum.toString):
         font = Font("Niagara Solid", FontWeight.Normal, 15)
       anchor.children += text
       AnchorPane.setTopAnchor(text, 5)
@@ -141,29 +146,53 @@ object sudokuApp extends JFXApp3:
       val nrButton = new Button(i.toString):
         padding = Insets(10)
         onAction =
-          (event) => println("ouch! nr: " + i)
+          (_) =>
+            gameHandler.value.insertValue(i)
+            println("changed cell")
       buttons.children += nrButton
     buttons.children += new Button("Delete entry"):
       padding = Insets(10, 0, 10, 0)
       margin  = Insets(0, 0, 0, 20)
     buttons
 
-  private def setUpBubble(): Region =
-    val bubble = new Region:
-      alignmentInParent = Pos.Center
+  // prety much done?
+  private def setUpBubble(): StackPane =
+    val bubbleVisual = new Region:
       minWidth = 400
       maxWidth = 400
       minHeight = 400
       maxHeight = 400
-      background = Background(Array(new BackgroundFill(
-        (Yellow),
-        CornerRadii.Empty,
-        Insets(0, 20, 0, 0))))
-    bubble.border = new Border(new BorderStroke(Black, Black, Black, Black,
+      background = Background(Array(new BackgroundFill((Yellow), CornerRadii(15), Insets(0, 20, 0, 0))))
+    bubbleVisual.border = new Border(new BorderStroke(Black, Black, Black, Black,
       BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid,
-      CornerRadii(5), BorderWidths(10), Insets(0, 20, 0, 0)))
+      CornerRadii(5), BorderWidths(10),
+      Insets(0, 20, 0, 0)))
 
-    bubble
+    val title = new Text("Possible sum-splits for the selected region: "):
+      font = Font("Times New Roman", FontWeight.ExtraBold, 19)
+      translateX = 10
+      translateY = 25
+
+    val textScrollPane = new ScrollPane:
+      translateX = 12
+      translateY = 34
+      style      = "-fx-background: yellow"
+      content    = new VBox:
+        children = gameHandler.value.getBubble.map( x => new Text(x.mkString(" + ")) ).toSeq
+      prefWidth  = 350
+      prefHeight = 350
+
+    bubbleSums.onChange(
+      (_, _, newValue) =>
+      textScrollPane.content = new VBox:
+        children = bubbleSums.getValue.toSeq.sortBy( _.min ).map(
+          x => new Text(x.mkString(" + ")):
+            font = Font("Times New Roman", FontWeight.Normal, 18)
+        )
+    )
+
+    new StackPane():
+      children = Seq(new Group(bubbleVisual, title, textScrollPane))
 
   private def pushDialogue(stage: Stage, dialogueType: Alert.AlertType, alertTitle: String, header: String, description: String): Option[ButtonType] =
     new Alert(dialogueType) {
@@ -177,11 +206,11 @@ object sudokuApp extends JFXApp3:
     if gameHandler != null then
       try
         if GameHandler.getAddress != null && samePlace then
-          GameHandler.saveGame(gameHandler)
+          GameHandler.saveGame(gameHandler.value)
         else
           val selectedLocation = fileChooser.showSaveDialog(stage)
           if selectedLocation != null then
-            GameHandler.saveGame(gameHandler, selectedLocation.toString)
+            GameHandler.saveGame(gameHandler.value, selectedLocation.toString)
       catch
         case e: UnknownException => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown exception", e.description)
         case e: Exception        => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown exception", e.getMessage)
@@ -193,7 +222,8 @@ object sudokuApp extends JFXApp3:
     try
       val selectedFile = fileChooser.showOpenDialog(stage)
       if selectedFile != null then
-        gameHandler = GameHandler.loadGame(selectedFile.toString)
+        gameHandler = new SimpleObjectProperty[GameHandler](GameHandler.loadGame(selectedFile.toString))
+        gameHandler.addListener((_, oldValue, newValue) => println("Changed!"))
 
         val myBorderPane = stage.scene.getValue.lookup("#abecedar").asInstanceOf[javafx.scene.layout.BorderPane]
         myBorderPane.center = setUpBoard()
@@ -207,7 +237,7 @@ object sudokuApp extends JFXApp3:
 
   private def resetGame() =
     try
-      gameHandler.resetGame()
+      gameHandler.value.resetGame()
     catch
       case e: NullPointerException => pushDialogue(stage, Alert.AlertType.Warning, "Warning!", "Can't reset an empty game.",
             "Please first open a game in order to reset it.")

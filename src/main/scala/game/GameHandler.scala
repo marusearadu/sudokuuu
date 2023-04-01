@@ -11,7 +11,7 @@ import scala.util.Random.nextInt
 
 // Some private variables used to read & write from file.
 
-class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private var accountingBubble: Set[Array[Int]] = Set(Array()), private var grid: Grid):
+class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private var grid: Grid):
   private def selectedCell: Option[GridCell] = this.selectedPos.map( x => this.getGridCells(x._1)(x._2) )
 
   private def possibleSumsOfARegion(region: GridRegion): Set[Array[Int]] =
@@ -25,7 +25,7 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
 
     // possibleSums will have a lot of arrays that are identical up to a permutation
     // to get rid of them, we just group them by their respective idential sets and choose a random element
-    possibleSums.filter( _.sum == emptyCellsSum ).groupBy( _.toSet ).map( (x, y) => y.head ).toSet
+    possibleSums.filter( _.sum == emptyCellsSum ).groupBy( _.toSet ).map( (x, y) => y.head.sorted ).toSet
 
   // some random bug appeared once but can't be repeated, i don't know why but i really do hope it was a special instance of me being stupid
   def possibleValuesAt(pos: (Int, Int)) =
@@ -41,22 +41,18 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
       .map( x => this.possibleSumsOfARegion(x.getRegion).flatMap( _.toSet) ).getOrElse( Set[Int]() ) // getting all the possible values in this region according to possibleSumsOfARegion
       .diff(takenValues)
 
-  private def updateBubble(): Unit =
-    accountingBubble = this.selectedCell.map(x => possibleSumsOfARegion(x.getRegion)).getOrElse(Set[Array[Int]]())
+  def getBubble: Set[Array[Int]] =
+    this.selectedCell.map(x => possibleSumsOfARegion(x.getRegion)).getOrElse(Set[Array[Int]]())
 
   def resetGame(): Unit =
     this.getGrid.getGridCells.flatten.foreach( _.deleteValue())
-    updateBubble()
 
   def getGrid: Grid = this.grid
 
   private def getGridCells = this.getGrid.getGridCells
 
-  def getBubble: Set[Array[Int]] = this.accountingBubble
-
   def select(pos: (Int, Int)): Unit =
     this.selectedPos = Some(pos)
-    updateBubble()
 
   def         isGridFull    : Boolean = getGridCells.flatten.forall( _.isNonEmpty )
 
@@ -80,13 +76,11 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
 
   def         isGridCorrect : Boolean = isGridFull && areRowsCorrect && areColsCorrect && areSqrsCorrect && areRegsCorrect
 
-  def insertValue(newValue: Int): Unit =
+  def   insertValue(newValue: Int): Unit =
     this.selectedCell.foreach( _.setValue(newValue) )
-    updateBubble()
 
   def deleteValue(): Unit =
     this.selectedCell.foreach( _.deleteValue() )
-    updateBubble()
 
   def prettyPrint(): String = {
     this.getGridCells.grouped(3).map { bigGroup =>
@@ -109,7 +103,7 @@ object GameHandler:
   private val X               = "x"
   private val Y               = "y"
   private val VALUE           = "value"
-  private var currentAddress: String = null
+  private var currentAddress: String = _
   
   def getAddress: String = this.currentAddress
 
