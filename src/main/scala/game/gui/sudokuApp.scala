@@ -37,6 +37,7 @@ object sudokuApp extends JFXApp3:
   private val WINDOW_WIDTH                 = 960
   private val WINDOW_HEIGHT                = 720
   private val SQUARE_SIZE                  = 50
+  private val BOTTOM_ROW_PADDING           = 7
   private var gameHandler: GameHandler     = _
   private var numberedButtons: Seq[Button] = _
 
@@ -121,7 +122,6 @@ object sudokuApp extends JFXApp3:
         style     <== when(selectedPos === (i, j)) choose "-fx-background-color: green;" otherwise "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
         onMouseEntered = (_) =>
           gameHandler.possibleValuesAt((i, j)).foreach( i => numberedButtons(i - 1).style = "-fx-background-color: yellow ;")
-          println("Possible values at " + (i, j) + " are: " + gameHandler.possibleValuesAt((i, j)))
         onMouseExited  = (_) => gameHandler.possibleValuesAt((i, j)).foreach( i => numberedButtons(i - 1).style = "-fx-background-color: #b8c6db;")
         onMouseClicked = (_) =>
           gameHandler.select((i, j))
@@ -159,7 +159,7 @@ object sudokuApp extends JFXApp3:
       margin  = Insets(10)
       children = numberedButtons
     buttons.children += new Button("Delete entry"):
-      padding = Insets(10, 2, 10, 2)
+      padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
       margin  = Insets(0, 0, 0, 20)
       onAction =
         (event) =>
@@ -237,7 +237,7 @@ object sudokuApp extends JFXApp3:
       if selectedFile != null then
         gameHandler = GameHandler.loadGame(selectedFile.toString)
         numberedButtons = (1 to 9).toSeq.map( i => new Button(i.toString){
-          padding = Insets(10)
+          padding = Insets(BOTTOM_ROW_PADDING)
           onAction = ((_) => {
             gameHandler.insertValue(i)
             valuesInTheSquare(selectedPos.value._1)(selectedPos.value._2).value = i
@@ -256,6 +256,9 @@ object sudokuApp extends JFXApp3:
   private def resetGame() =
     try
       gameHandler.resetGame()
+      selectedPos.value = (-1, -1)
+      bubbleSums.value  = Set[Array[Int]]()
+      valuesInTheSquare.foreach( arr => arr.foreach( intProp => intProp.value = 0) )
     catch
       case e: NullPointerException => pushDialogue(stage, Alert.AlertType.Warning, "Warning!", "Can't reset an empty game.",
             "Please first open a game in order to reset it.")

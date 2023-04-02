@@ -11,11 +11,13 @@ import scala.collection.mutable.{Buffer, Set as MSet}
 import scala.io.Source.fromFile
 import scala.util.Random.nextInt
 
-// Some private variables used to read & write from file.
 
 class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private var grid: Grid):
+  /** Returns the currently selected cell, if any. */
   private def selectedCell: Option[GridCell] = this.selectedPos.map( x => this.getGridCells(x._1)(x._2) )
 
+  /** Calculates the possible sums of an non-full region.
+   * In case the region is full, it returns an empty Set[Array[Int]]*/
   private def possibleSumsOfARegion(region: GridRegion): Set[Array[Int]] =
     var possibleSums: Set[Array[Int]] = Set(Array())
     val theCellValues = region.getCells.toArray.map( x => this.getGridCells(x._1)(x._2).getValue )
@@ -29,8 +31,13 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
     // to get rid of them, we just group them by their respective idential sets and choose a random element
     possibleSums.filter( _.sum == emptyCellsSum ).groupBy( _.toSet ).map( (x, y) => y.head.sorted ).toSet
 
-  // some random bug appeared once but can't be repeated, i don't know why but i really do hope it was a special instance of me being stupid
+  /**
+   * Returns the possible values that can be placed at the specified position without
+   * violating the rules of Sudoku and while taking into account the possible sum-splits
+   * inside the region.
+   */
   def possibleValuesAt(pos: (Int, Int)): Set[Int] =
+  // some random bug appeared once but can't be repeated, i don't know why but i really do hope it was a special instance of me being stupid
     val valuesInThe3Square = this.getGridCells.slice((pos._1 / 3) * 3, (pos._1 / 3) * 3 + 3)
       .flatMap(x => x.slice((pos._2 / 3) * 3, (pos._2 / 3) * 3 + 3))
       .map(_.getValue)
@@ -41,26 +48,34 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
 
     this.possibleSumsOfARegion(this.getGridCells(pos._1)(pos._2).getRegion).flatMap(_.toSet).diff(takenValues) // getting all the possible values in this region according to possibleSumsOfARegion
 
-
+  /** Returns the set of possible sum-splits for the currently selected cell's region. */
   def getBubble: Set[Array[Int]] =
     this.selectedCell.map(x => possibleSumsOfARegion(x.getRegion)).getOrElse(Set[Array[Int]]())
 
+  /** Resets the game, i.e. all the cells are equalled to 0. */
   def resetGame(): Unit =
     this.getGrid.getGridCells.flatten.foreach( _.deleteValue())
 
+  /** Returns the grid being used by the game handler. */
   def getGrid: Grid = this.grid
 
-  private def getGridCells = this.getGrid.getGridCells
+  /** Returns the grid's GridCells; shortcut method */
+  private def getGridCells: Array[Array[GridCell]] = this.getGrid.getGridCells
 
+  /** Selects the cell at the given position. */
   def select(pos: (Int, Int)): Unit =
     this.selectedPos = Some(pos)
 
+  /** Checks whether the grid is full. */
   def         isGridFull    : Boolean = getGridCells.flatten.forall( _.isNonEmpty )
 
+  /** Checks whether all the rows of the grid are correct. */
   private def areRowsCorrect: Boolean = this.getGridCells.forall( _.toSet == (1 to 9).toSet )
 
+  /** Checks whether all the columns of the grid are correct. */
   private def areColsCorrect: Boolean = this.getGridCells.transpose.forall( _.toSet == (1 to 9).toSet )
 
+   /** Checks whether all the squares of the grid are correct. */
   private def areSqrsCorrect: Boolean =
     for
       x <- (0 until 3)
@@ -70,20 +85,26 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
         .map( _.getValue ).toSet != (1 to 9).toSet then return false
     true
 
+  /** Checks whether all the regions of the grid are correct.*/
   private def areRegsCorrect: Boolean =
     this.getGrid.getRegions.forall(
       x => x.getCells.map( cell => this.getGridCells(cell._1)(cell._2).getValue ).sum == x.getSum
     )
 
+  /** Checks whether the grid is correct (i.e., whether all the rows, columns, squares, and regions are correct, and
+   *  whether the grid is full). */
   def         isGridCorrect : Boolean = isGridFull && areRowsCorrect && areColsCorrect && areSqrsCorrect && areRegsCorrect
 
+  /** Inserts the given value into the selected cell (if there is one). */
   def   insertValue(newValue: Int): Unit =
     this.selectedCell.foreach( _.setValue(newValue) )
 
+  /** Deletes the given value into the selected cell (if there is one). */
   def deleteValue(): Unit                =
     this.selectedCell.foreach( _.deleteValue() )
 
   // un-make this function private in order to easily test in the sbt console
+  /** Creates a pretty, terminal-friendly string of the current state of the sudoku game. */
   private def prettyPrint(): String = {
     this.getGridCells.grouped(3).map { bigGroup =>
       bigGroup.map { row =>
@@ -94,9 +115,6 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
     }.mkString("+-------+-------+-------+\n", "\n+-------+-------+-------+\n", "\n+-------+-------+-------+") +
       "\nAll the possible combinations, up to permutations: \n" + this.getBubble.map( _.mkString(" + ") ).mkString("\n")
   }
-
-  def getValue: Any =
-    this.selectedCell.map(_.getValue).getOrElse("Please select a cell first.")
 end GameHandler
 
 object GameHandler:
@@ -107,8 +125,10 @@ object GameHandler:
   private val VALUE           = "value"
   private var currentAddress: String = _
   
+  /** Returns the current (i.e., the last-opened) address. */
   def getAddress: String = this.currentAddress
-
+  
+  /** Load the game from a file. */
   def loadGame(address: String): GameHandler =
     currentAddress = address
     val gameGrid = (0 to 8).toArray.map( x => Array.ofDim[GridCell](9) )
@@ -174,7 +194,8 @@ object GameHandler:
       case e: IOException            => throw new UnknownException("Unknown IOException occured: \n" + e)
       case e: Exception              => throw new UnknownException("Unknown exception occured: \n" + e)
     if returnGrid == null then throw new CorruptedFileException("Corrupt JSON file. \n") else GameHandler(grid = returnGrid)
-
+  
+  /** Saves the game to a file; the location is pre-defined as the last-opened one. */
   def saveGame(game: GameHandler, address: String = this.currentAddress): Unit =
     def makeMap(x: Int, y: Int, z: Int): Map[String, Int] = Map(X + z -> x, Y + z -> y, VALUE + z -> game.getGrid.getGridCells(x)(y).getValue)
 
