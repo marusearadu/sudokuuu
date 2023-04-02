@@ -3,21 +3,22 @@ package game.gui
 import game.{BadFilePathException, CorruptedFileException, GameHandler, GridCell, UnknownException}
 import scalafx.application.{JFXApp3, Platform}
 import scalafx.Includes.*
-import scalafx.beans.property.{IntegerProperty, ObjectProperty, ReadOnlyObjectWrapper}
+import scalafx.beans.property.{BooleanProperty, IntegerProperty, ObjectProperty, ReadOnlyObjectWrapper}
 import scalafx.scene.{Group, Scene}
 import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, GridPane, Pane, Region, StackPane, TilePane, VBox}
 import scalafx.scene.paint.Color.*
 import scalafx.scene.control.{Alert, Button, ButtonType, Label, Menu, MenuBar, MenuItem, ScrollPane, TextArea}
 import scalafx.geometry.{Insets, Pos}
-import scalafx.scene.input.{KeyCombination, MouseEvent}
+import scalafx.scene.input.{KeyCode, KeyEvent, MouseEvent}
 import scalafx.scene.paint.Color
 import scalafx.scene.shape.Rectangle
 import scalafx.stage.{FileChooser, Stage}
 import scalafx.scene.text.{Font, FontWeight, Text, TextFlow}
 import javafx.beans.property.SimpleObjectProperty
 
-import scala.language.postfixOps
-
+// TODO: add a 'check board button' to the game
+//  and why is there a delay when playing
+//  SWITCH UP GAME COLORING
 object sudokuApp extends JFXApp3:
   // now i do realize that probably just inserting
   // the whole GameHandler object into an ObjectProperty
@@ -32,17 +33,14 @@ object sudokuApp extends JFXApp3:
   private val fileChooser                  = new FileChooser
   fileChooser.getExtensionFilters.add(new FileChooser.ExtensionFilter("JSON Files Only", "*.json"))
   private val selectedPos                  = ObjectProperty((-1, -1))
-  private val bubbleSums                   = ObjectProperty(Set[Array[Int]]())
-  private val valuesInTheSquare: Array[Array[IntegerProperty]] = ( (0 until 9).map( i => (0 until 9).map( j => IntegerProperty(0) ).toArray ).toArray )
+  private var valuesInTheSquare: Array[Array[IntegerProperty]] = ( (0 until 9).map( i => (0 until 9).map( j => IntegerProperty(0) ).toArray ).toArray )
   private val WINDOW_WIDTH                 = 960
   private val WINDOW_HEIGHT                = 720
   private val SQUARE_SIZE                  = 50
-  private val BOTTOM_ROW_PADDING           = 7
+  private val BOTTOM_ROW_PADDING           = 10
   private var gameHandler: GameHandler     = _
   private var numberedButtons: Seq[Button] = _
 
-  // TODO: SWITCH UP GAME COLORING
-  //  ... and add handler events for when user presses a digit
   override def start(): Unit =
     stage = new JFXApp3.PrimaryStage:
       title     = "Killer Sudoku"
@@ -54,6 +52,7 @@ object sudokuApp extends JFXApp3:
       maxHeight = WINDOW_HEIGHT
 
     val root = new BorderPane:
+      focusTraversable = true
       top    = setUpMenuBar()
       bottom = new Pane()
       right  = new Pane()
@@ -66,6 +65,7 @@ object sudokuApp extends JFXApp3:
       id     = "abecedar"
 
     stage.scene = new Scene(parent = root, WINDOW_WIDTH, WINDOW_HEIGHT)
+    setUpControls()
 
   private def setUpMenuBar(): MenuBar  =
     val menuBar = new MenuBar{
@@ -74,22 +74,18 @@ object sudokuApp extends JFXApp3:
           items = Seq(
             new MenuItem("Open..."){
               onAction = (event) => loadGame()
-              accelerator = KeyCombination.keyCombination("Ctrl + O")
             },
             new MenuItem("Save game"){
               onAction = (event) => saveGame()
-              accelerator = KeyCombination.keyCombination("Ctrl + S")
             },
             new MenuItem("Save to..."){
               onAction = (event) => saveGame(false)
             },
             new MenuItem("Reset progress"){
               onAction = (event) => resetGame()
-              accelerator = KeyCombination.keyCombination("Ctrl + R")
             },
             new MenuItem("Exit"){
               onAction = (event) => exitGame()
-              accelerator = KeyCombination.keyCombination("Ctrl + X")
             }
           )
         }
@@ -116,17 +112,17 @@ object sudokuApp extends JFXApp3:
       valuesInTheSquare(i)(j).value = gameHandler.getGrid.getGridCells(j)(i).getValue
       val insideText  = new Text(if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString):
         font = Font("Niagara Solid", FontWeight.SemiBold, 30)
-      valuesInTheSquare(i)(j).onChange( (_, _, newValue) => insideText.text = if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString)
+      valuesInTheSquare(i)(j).addListener(
+        (_, _, newValue) =>
+          gameHandler.insertValue(newValue.intValue())
+          insideText.text = if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString
+      )
 
       val smallSquare = new StackPane:
         style     <== when(selectedPos === (i, j)) choose "-fx-background-color: green;" otherwise "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
-        onMouseEntered = (_) =>
-          gameHandler.possibleValuesAt((i, j)).foreach( i => numberedButtons(i - 1).style = "-fx-background-color: yellow ;")
+        onMouseEntered = (_) => gameHandler.possibleValuesAt((i, j)).foreach( i => numberedButtons(i - 1).style = "-fx-background-color: yellow ;")
         onMouseExited  = (_) => gameHandler.possibleValuesAt((i, j)).foreach( i => numberedButtons(i - 1).style = "-fx-background-color: #b8c6db;")
-        onMouseClicked = (_) =>
-          gameHandler.select((i, j))
-          bubbleSums.value  = gameHandler.getBubble
-          selectedPos.value = (i, j)
+        onMouseClicked = (_) => selectedPos.value = (i, j)
 
       val smallSquareVisual = new Region:
         minWidth  = SQUARE_SIZE
@@ -152,23 +148,32 @@ object sudokuApp extends JFXApp3:
       boardSquareArray(x)(y).children += anchor
     boardSquare
 
-  // TODO: add a 'check board button' to the game
-  //   set up the padding/margin values as private vals
   private def setUpBottom(): TilePane =
     val buttons = new TilePane:
-      margin  = Insets(10)
-      children = numberedButtons
-    buttons.children += new Button("Delete entry"):
+      margin  = Insets(20)
+
+    numberedButtons   = (1 to 9).toSeq.map( i => new Button(i.toString){
+      padding  = Insets(BOTTOM_ROW_PADDING)
+      style    = "-fx-background-color: #b8c6db;"
+      focusTraversable = false
+      onAction = ((_) => if selectedPos.value != (-1, -1) then updateTable(i))})
+    buttons.children  = numberedButtons
+    buttons.children += new Button("Delete"):
       padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
-      margin  = Insets(0, 0, 0, 20)
-      onAction =
-        (event) =>
-          gameHandler.deleteValue()
-          valuesInTheSquare(selectedPos.value._1)(selectedPos.value._2).value = 0
-          bubbleSums.value = gameHandler.getBubble
+      focusTraversable = false
+      style    = "-fx-background-color: #b8c6db;"
+      onAction = (event) => if selectedPos.value != (-1, -1) then updateTable(0)
+    buttons.children += new Button("Check"):
+      padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
+      margin  = Insets(0, 0, 0, 15)
+      focusTraversable = false
+      style    = "-fx-background-color: #b8c6db;"
+      onAction = (event) => if selectedPos.value != (-1, -1) then updateTable(0)
+
     buttons
 
-  // TODO: CHANGE THE TITLE, EXPLAINIG ALL WE HAVE IS STUPID VARIABLES
+  private def updateTable(i: Int) = valuesInTheSquare(selectedPos.value._1)(selectedPos.value._2).value = i
+
   private def setUpBubble(): StackPane =
     val bubbleVisual = new Region:
       minWidth = 400
@@ -181,31 +186,56 @@ object sudokuApp extends JFXApp3:
       CornerRadii(5), BorderWidths(10),
       Insets(0, 20, 0, 0)))
 
-    val title = new Text("Possible sum-splits for the selected region: "):
+    val title = new Text("Possible sum-splits for the selected region: \n(note: only possible permutations shown)"):
       font = Font("Times New Roman", FontWeight.ExtraBold, 19)
       translateX = 10
       translateY = 25
 
+    val contentVBox = new VBox:
+      children = gameHandler.getBubble.map( x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)} ).toSeq
+
     val textScrollPane = new ScrollPane:
       translateX = 12
-      translateY = 34
+      translateY = 53
       style      = "-fx-background: yellow"
-      content    = new VBox:
-        children = gameHandler.getBubble.map( x => new Text(x.mkString(" + ")) ).toSeq
+      content    = contentVBox
       prefWidth  = 350
-      prefHeight = 350
+      prefHeight = 330
 
-    bubbleSums.onChange(
+    selectedPos.onChange(
       (_, _, newValue) =>
-      textScrollPane.content = new VBox:
-        children = bubbleSums.getValue.toSeq.sortBy( _.min ).map(
-          x => new Text(x.mkString(" + ")):
-            font = Font("Times New Roman", FontWeight.Normal, 18)
+        if newValue != (-1, -1) then gameHandler.select(newValue) else gameHandler.deselect()
+        contentVBox.children = gameHandler.getBubble.toSeq.map( arr => arr.sorted ).sortBy(arr => (arr(0), arr(1)) ).map(
+            x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)}
+          )
+    )
+
+    valuesInTheSquare.foreach(
+      x => x.foreach(
+        y => y.addListener(
+          (_, _, newValue) => contentVBox.children = gameHandler.getBubble.map( x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)} ).toSeq
         )
+      )
     )
 
     new StackPane():
       children = Seq(new Group(bubbleVisual, title, textScrollPane))
+
+  private def setUpControls(): Unit =
+    stage.scene.value.addEventFilter(KeyEvent.KeyPressed,
+      (event: KeyEvent) =>
+        if selectedPos.value != (-1, -1) then
+          event.code match
+            case key if key.isDigitKey => updateTable(key.getName.last.asDigit)
+            case KeyCode.Left          => selectedPos.value = (selectedPos.value._1, math.max(0, selectedPos.value._2 - 1))
+            case KeyCode.Right         => selectedPos.value = (selectedPos.value._1, math.min(8, selectedPos.value._2 + 1))
+            case KeyCode.Up            => selectedPos.value = (math.max(0, selectedPos.value._1 - 1), selectedPos.value._2)
+            case KeyCode.Down          => selectedPos.value = (math.min(8, selectedPos.value._1 + 1), selectedPos.value._2)
+            case KeyCode.BackSpace     => updateTable(0)
+            //            case KeyCode.Escape        => selectedPos.value = (-1, -1)
+            //          TODO: I want to add this functionality but it looks like every time after escaping it takes 2 clicks to select a region
+            case _                     => ()
+    )
 
   private def pushDialogue(stage: Stage, dialogueType: Alert.AlertType, alertTitle: String, header: String, description: String): Option[ButtonType] =
     new Alert(dialogueType) {
@@ -235,13 +265,9 @@ object sudokuApp extends JFXApp3:
     try
       val selectedFile = fileChooser.showOpenDialog(stage)
       if selectedFile != null then
+        valuesInTheSquare = ( (0 until 9).map( i => (0 until 9).map( j => IntegerProperty(0) ).toArray ).toArray )
+        selectedPos.value = (-1, -1)
         gameHandler = GameHandler.loadGame(selectedFile.toString)
-        numberedButtons = (1 to 9).toSeq.map( i => new Button(i.toString){
-          padding = Insets(BOTTOM_ROW_PADDING)
-          onAction = ((_) => {
-            gameHandler.insertValue(i)
-            valuesInTheSquare(selectedPos.value._1)(selectedPos.value._2).value = i
-            bubbleSums.value = gameHandler.getBubble})})
 
         val myBorderPane = stage.scene.getValue.lookup("#abecedar").asInstanceOf[javafx.scene.layout.BorderPane]
         myBorderPane.center = setUpBoard()
@@ -255,13 +281,14 @@ object sudokuApp extends JFXApp3:
 
   private def resetGame() =
     try
-      gameHandler.resetGame()
       selectedPos.value = (-1, -1)
-      bubbleSums.value  = Set[Array[Int]]()
-      valuesInTheSquare.foreach( arr => arr.foreach( intProp => intProp.value = 0) )
+      valuesInTheSquare.foreach(
+        arr => arr.foreach(
+          intProp =>
+            intProp.value = 0
+        )
+      )
     catch
-      case e: NullPointerException => pushDialogue(stage, Alert.AlertType.Warning, "Warning!", "Can't reset an empty game.",
-            "Please first open a game in order to reset it.")
       case e: Exception              => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unkwonn Exception", e.getMessage)
 
   private def exitGame() =

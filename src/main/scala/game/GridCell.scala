@@ -6,11 +6,8 @@ class GridCell(private var region: GridRegion, private var value: Int = 0):
   def getValue: Int = this.value
 
   def setValue(newValue: Int): Unit =
-    require(newValue >= 1 && newValue <= 9)
+    require(newValue >= 0 && newValue <= 9)
     this.value = newValue
-
-  def deleteValue(): Unit =
-    this.value = 0
     
   def isNonEmpty: Boolean = this.value != 0
 
