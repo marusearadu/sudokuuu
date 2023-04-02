@@ -54,7 +54,8 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
 
   /** Resets the game, i.e. all the cells are equalled to 0. */
   def resetGame(): Unit =
-    this.getGrid.getGridCells.flatten.foreach( _.deleteValue())
+    this.getGrid.getGridCells.flatten.foreach( _.setValue(0) )
+    this.selectedPos = None
 
   /** Returns the grid being used by the game handler. */
   def getGrid: Grid = this.grid
@@ -65,6 +66,9 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
   /** Selects the cell at the given position. */
   def select(pos: (Int, Int)): Unit =
     this.selectedPos = Some(pos)
+    
+  def deselect()             : Unit =
+    this.selectedPos = None
 
   /** Checks whether the grid is full. */
   def         isGridFull    : Boolean = getGridCells.flatten.forall( _.isNonEmpty )
@@ -75,7 +79,7 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
   /** Checks whether all the columns of the grid are correct. */
   private def areColsCorrect: Boolean = this.getGridCells.transpose.forall( _.toSet == (1 to 9).toSet )
 
-   /** Checks whether all the squares of the grid are correct. */
+  /** Checks whether all the squares of the grid are correct. */
   private def areSqrsCorrect: Boolean =
     for
       x <- (0 until 3)
@@ -98,10 +102,6 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
   /** Inserts the given value into the selected cell (if there is one). */
   def   insertValue(newValue: Int): Unit =
     this.selectedCell.foreach( _.setValue(newValue) )
-
-  /** Deletes the given value into the selected cell (if there is one). */
-  def deleteValue(): Unit                =
-    this.selectedCell.foreach( _.deleteValue() )
 
   // un-make this function private in order to easily test in the sbt console
   /** Creates a pretty, terminal-friendly string of the current state of the sudoku game. */
