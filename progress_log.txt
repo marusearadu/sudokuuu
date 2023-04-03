@@ -1,10 +1,11 @@
-Pretty much finished implementing the back-end.
+Close to finishing the project; some small bug, a reimplementation, and finishing up the color scheme and the buttons is all that remains.
 
-The whole backend was manually tested through REPL. Unit tests are yet to be implemented.
+No progress on testing since last time.
 
-Well, a lot of problems were met - but all were solved quite easily (or sometimes laboriously :) )
+I don't even know where to start, so i think i'll just put it bluntly - way too many problems, all were dealt with, but oh god the scalafx
+documentation is miserable and i wish there was someone who could kinda supervise my progress hourly/daily and nudge me into the right direction
+when i go off the beaten track.
 
-I have no idea because I'm bad at time management.
-But I'd say about ~30h (?)
+Lost in time honestly.
 
-Managed much more stuff than previously, but still a lot to do.
+Managed quite a lot though.

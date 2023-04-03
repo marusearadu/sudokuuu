@@ -5,7 +5,7 @@ import scalafx.application.{JFXApp3, Platform}
 import scalafx.Includes.*
 import scalafx.beans.property.{BooleanProperty, IntegerProperty, ObjectProperty, ReadOnlyObjectWrapper}
 import scalafx.scene.{Group, Scene}
-import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, GridPane, Pane, Region, StackPane, TilePane, VBox}
+import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, GridPane, HBox, Pane, Region, StackPane, TilePane, VBox}
 import scalafx.scene.paint.Color.*
 import scalafx.scene.control.{Alert, Button, ButtonType, Label, Menu, MenuBar, MenuItem, ScrollPane, TextArea}
 import scalafx.geometry.{Insets, Pos}
@@ -17,7 +17,7 @@ import scalafx.scene.text.{Font, FontWeight, Text, TextFlow}
 import javafx.beans.property.SimpleObjectProperty
 
 // TODO: add a 'check board button' to the game
-//  and why is there a delay when playing
+//  evenly space the buttons
 //  SWITCH UP GAME COLORING
 object sudokuApp extends JFXApp3:
   // now i do realize that probably just inserting
@@ -148,16 +148,16 @@ object sudokuApp extends JFXApp3:
       boardSquareArray(x)(y).children += anchor
     boardSquare
 
-  private def setUpBottom(): TilePane =
-    val buttons = new TilePane:
-      margin  = Insets(20)
-
+  private def setUpBottom(): HBox =
     numberedButtons   = (1 to 9).toSeq.map( i => new Button(i.toString){
       padding  = Insets(BOTTOM_ROW_PADDING)
       style    = "-fx-background-color: #b8c6db;"
       focusTraversable = false
       onAction = ((_) => if selectedPos.value != (-1, -1) then updateTable(i))})
-    buttons.children  = numberedButtons
+    val buttons = new HBox:
+      spacing   = 10
+      padding   = Insets(10)
+      children  = numberedButtons
     buttons.children += new Button("Delete"):
       padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
       focusTraversable = false
@@ -165,7 +165,7 @@ object sudokuApp extends JFXApp3:
       onAction = (event) => if selectedPos.value != (-1, -1) then updateTable(0)
     buttons.children += new Button("Check"):
       padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
-      margin  = Insets(0, 0, 0, 15)
+//      margin  = Insets(0, 0, 0, 15)
       focusTraversable = false
       style    = "-fx-background-color: #b8c6db;"
       onAction = (event) => if selectedPos.value != (-1, -1) then updateTable(0)
@@ -232,7 +232,7 @@ object sudokuApp extends JFXApp3:
             case KeyCode.Up            => selectedPos.value = (math.max(0, selectedPos.value._1 - 1), selectedPos.value._2)
             case KeyCode.Down          => selectedPos.value = (math.min(8, selectedPos.value._1 + 1), selectedPos.value._2)
             case KeyCode.BackSpace     => updateTable(0)
-            //            case KeyCode.Escape        => selectedPos.value = (-1, -1)
+            case KeyCode.Escape        => selectedPos.value = (-1, -1)
             //          TODO: I want to add this functionality but it looks like every time after escaping it takes 2 clicks to select a region
             case _                     => ()
     )

@@ -215,4 +215,3 @@ object GameHandler:
       case e: IOException => throw new UnknownException("An IOException was encountered, aborting saving. Please try again. \n")
       case e: Exception   => throw new UnknownException("Unknown exception occured: \n" + e)
 end GameHandler
-
