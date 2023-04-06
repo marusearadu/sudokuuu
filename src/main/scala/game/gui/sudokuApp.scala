@@ -9,7 +9,7 @@ import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, Bor
 import scalafx.scene.paint.Color.*
 import scalafx.scene.control.{Alert, Button, ButtonType, Label, Menu, MenuBar, MenuItem, ScrollPane, TextArea}
 import scalafx.geometry.{Insets, Pos}
-import scalafx.scene.input.{KeyCode, KeyEvent, MouseEvent}
+import scalafx.scene.input.{KeyCode, KeyCombination, KeyEvent, MouseEvent}
 import scalafx.scene.paint.Color
 import scalafx.scene.shape.Rectangle
 import scalafx.stage.{FileChooser, Stage}
@@ -74,18 +74,22 @@ object sudokuApp extends JFXApp3:
           items = Seq(
             new MenuItem("Open..."){
               onAction = (event) => loadGame()
+              accelerator = KeyCombination("Ctrl + O")
             },
             new MenuItem("Save game"){
               onAction = (event) => saveGame()
+              accelerator = KeyCombination("Ctrl + S")
             },
             new MenuItem("Save to..."){
               onAction = (event) => saveGame(false)
             },
             new MenuItem("Reset progress"){
               onAction = (event) => resetGame()
+              accelerator = KeyCombination("Ctrl + R")
             },
             new MenuItem("Exit"){
               onAction = (event) => exitGame()
+              accelerator = KeyCombination("Ctrl + X")
             }
           )
         }
@@ -222,7 +226,7 @@ object sudokuApp extends JFXApp3:
       children = Seq(new Group(bubbleVisual, title, textScrollPane))
 
   private def setUpControls(): Unit =
-    stage.scene.value.addEventFilter(KeyEvent.KeyPressed,
+    stage.scene.value.onKeyPressed =
       (event: KeyEvent) =>
         if selectedPos.value != (-1, -1) then
           event.code match
@@ -233,9 +237,7 @@ object sudokuApp extends JFXApp3:
             case KeyCode.Down          => selectedPos.value = (math.min(8, selectedPos.value._1 + 1), selectedPos.value._2)
             case KeyCode.BackSpace     => updateTable(0)
             case KeyCode.Escape        => selectedPos.value = (-1, -1)
-            //          TODO: I want to add this functionality but it looks like every time after escaping it takes 2 clicks to select a region
             case _                     => ()
-    )
 
   private def pushDialogue(stage: Stage, dialogueType: Alert.AlertType, alertTitle: String, header: String, description: String): Option[ButtonType] =
     new Alert(dialogueType) {
