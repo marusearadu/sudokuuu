@@ -5,7 +5,7 @@ import game.{BadFilePathException, CorruptedFileException, GameHandler, GridCell
 import scalafx.application.{JFXApp3, Platform}
 import scalafx.Includes.*
 import scalafx.beans.property.{BooleanProperty, IntegerProperty, ObjectProperty, ReadOnlyObjectWrapper}
-import scalafx.scene.{Group, Scene}
+import scalafx.scene.{Group, Node, Scene}
 import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, ColumnConstraints, CornerRadii, GridPane, HBox, Pane, Region, StackPane, TilePane, VBox}
 import scalafx.scene.paint.Color.*
 import scalafx.scene.control.{Alert, Button, ButtonType, Label, Menu, MenuBar, MenuItem, ScrollPane, TextArea}
@@ -16,15 +16,16 @@ import scalafx.scene.shape.Rectangle
 import scalafx.stage.{FileChooser, Stage}
 import scalafx.scene.text.{Font, FontWeight, Text, TextFlow}
 import javafx.beans.property.SimpleObjectProperty
+import javafx.collections.{FXCollections, ObservableList}
 import scalafx.beans.binding.{Bindings, ObjectBinding}
 import scalafx.beans.value.ObservableValue
 import scalafx.scene.effect.{DropShadow, Effect}
 
-// TODO: button get stuck on their color (M)
-//  weird but the 'x' button in endGame doesn't close when pressed (M)
-//  SWITCH UP GAME COLORING (A)
-//  ADD "SELECT POSITION TO SHOW POSSIBLE COMBINATIONS"
+// TODO: NUMBERED_BUTTONS GET STUCK ON THEIR COLOR (M)
+//  WEIRD BUT THE 'X' BUTTON IN ENDGAME DOESN'T CLOSE WHEN PRESSED (M)
+//  EDIT THE VIEW (A)
 //  testing
+
 object sudokuApp extends JFXApp3:
   // now i do realize that probably just inserting
   // the whole GameHandler object into an ObjectProperty
@@ -243,7 +244,6 @@ object sudokuApp extends JFXApp3:
 
     val contentVBox = new VBox:
       children = gameHandler.getBubble.map( x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)} ).toSeq
-
     val textScrollPane = new ScrollPane:
       translateX = 12
       translateY = 53
@@ -252,6 +252,16 @@ object sudokuApp extends JFXApp3:
       prefWidth  = 350
       prefHeight = 330
 
+    val selectCellToSeeCombos = new StackPane:
+      translateX = 12
+      translateY = 53
+      style      = "-fx-background: yellow"
+      prefWidth  = 350
+      prefHeight = 330
+      children = Seq(new Text("Select/press on a cell to see possible sum-splits."){font = Font("Times New Roman", FontWeight.Normal, 18)})
+    val switchablePane = new Pane:
+      children = if selectedPos.value == (-1, -1) then selectCellToSeeCombos else textScrollPane
+
     selectedPos.onChange(
       (_, oldValue, newValue) =>
         if oldValue != (-1, -1) then
@@ -259,8 +269,10 @@ object sudokuApp extends JFXApp3:
         if newValue != (-1, -1) then
           gameHandler.select(newValue)
           boardSquareArray(newValue._1)(newValue._2).style = "-fx-background-color: green;"
+          switchablePane.children = textScrollPane
         else
           gameHandler.deselect()
+          switchablePane.children = selectCellToSeeCombos
         contentVBox.children = gameHandler.getBubble.toSeq.map( arr => arr.sorted ).sortBy(arr => (arr(0), arr(1)) ).map(
             x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)}
           )
@@ -275,7 +287,7 @@ object sudokuApp extends JFXApp3:
     )
 
     new StackPane():
-      children = Seq(new Group(bubbleVisual, title, textScrollPane))
+      children = Seq(new Group(bubbleVisual, title, switchablePane))
 
   private def setUpControls(): Unit =
     stage.scene.value.onKeyPressed =
