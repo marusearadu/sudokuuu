@@ -1,11 +1,12 @@
 package game.gui
 
+import scala.collection.mutable.{Map as MMap, Set as MSet}
 import game.{BadFilePathException, CorruptedFileException, GameHandler, GridCell, UnknownException}
 import scalafx.application.{JFXApp3, Platform}
 import scalafx.Includes.*
 import scalafx.beans.property.{BooleanProperty, IntegerProperty, ObjectProperty, ReadOnlyObjectWrapper}
 import scalafx.scene.{Group, Scene}
-import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, GridPane, HBox, Pane, Region, StackPane, TilePane, VBox}
+import scalafx.scene.layout.{AnchorPane, Background, BackgroundFill, Border, BorderPane, BorderStroke, BorderStrokeStyle, BorderWidths, ColumnConstraints, CornerRadii, GridPane, HBox, Pane, Region, StackPane, TilePane, VBox}
 import scalafx.scene.paint.Color.*
 import scalafx.scene.control.{Alert, Button, ButtonType, Label, Menu, MenuBar, MenuItem, ScrollPane, TextArea}
 import scalafx.geometry.{Insets, Pos}
@@ -15,10 +16,15 @@ import scalafx.scene.shape.Rectangle
 import scalafx.stage.{FileChooser, Stage}
 import scalafx.scene.text.{Font, FontWeight, Text, TextFlow}
 import javafx.beans.property.SimpleObjectProperty
+import scalafx.beans.binding.{Bindings, ObjectBinding}
+import scalafx.beans.value.ObservableValue
+import scalafx.scene.effect.{DropShadow, Effect}
 
-// TODO: add a 'check board button' to the game
-//  evenly space the buttons
-//  SWITCH UP GAME COLORING
+// TODO: button get stuck on their color (M)
+//  weird but the 'x' button in endGame doesn't close when pressed (M)
+//  SWITCH UP GAME COLORING (A)
+//  ADD "SELECT POSITION TO SHOW POSSIBLE COMBINATIONS"
+//  testing
 object sudokuApp extends JFXApp3:
   // now i do realize that probably just inserting
   // the whole GameHandler object into an ObjectProperty
@@ -30,16 +36,19 @@ object sudokuApp extends JFXApp3:
   // and, well
   // too big of a pain to discover this
   // so damn it
-  private val fileChooser                  = new FileChooser
+  private val fileChooser                                        = new FileChooser
   fileChooser.getExtensionFilters.add(new FileChooser.ExtensionFilter("JSON Files Only", "*.json"))
-  private val selectedPos                  = ObjectProperty((-1, -1))
-  private var valuesInTheSquare: Array[Array[IntegerProperty]] = ( (0 until 9).map( i => (0 until 9).map( j => IntegerProperty(0) ).toArray ).toArray )
-  private val WINDOW_WIDTH                 = 960
-  private val WINDOW_HEIGHT                = 720
-  private val SQUARE_SIZE                  = 50
-  private val BOTTOM_ROW_PADDING           = 10
-  private var gameHandler: GameHandler     = _
-  private var numberedButtons: Seq[Button] = _
+  private val selectedPos                                        = ObjectProperty((-1, -1))
+  private var valuesInTheSquare: Array[Array[IntegerProperty]]   = _
+  private val activationTrackingProperty: Array[BooleanProperty] = (0 to 8).map(i => BooleanProperty(false)).toArray
+  private var isMyGridFull                                       = BooleanProperty(false)
+  private val WINDOW_WIDTH                                       = 960
+  private val WINDOW_HEIGHT                                      = 720
+  private val SQUARE_SIZE                                        = 50
+  private val BOTTOM_ROW_PADDING                                 = 10
+  private var boardSquareArray                                   = (0 to 8).toArray.map( x => Array.ofDim[StackPane](9) )
+  private var gameHandler: GameHandler                           = _
+  private var numberedButtons: Seq[Button]                       = _
 
   override def start(): Unit =
     stage = new JFXApp3.PrimaryStage:
@@ -50,6 +59,9 @@ object sudokuApp extends JFXApp3:
       maxWidth  = WINDOW_WIDTH
       minHeight = WINDOW_HEIGHT
       maxHeight = WINDOW_HEIGHT
+      onCloseRequest = (event) =>
+        event.consume()
+        exitGame()
 
     val root = new BorderPane:
       focusTraversable = true
@@ -71,23 +83,29 @@ object sudokuApp extends JFXApp3:
     val menuBar = new MenuBar{
       menus = Seq(
         new Menu("Game"){
+          style = "-fx-font-weight: bold;"
           items = Seq(
             new MenuItem("Open..."){
+              style = "-fx-font-weight: normal;"
               onAction = (event) => loadGame()
               accelerator = KeyCombination("Ctrl + O")
             },
             new MenuItem("Save game"){
+              style = "-fx-font-weight: normal;"
               onAction = (event) => saveGame()
               accelerator = KeyCombination("Ctrl + S")
             },
             new MenuItem("Save to..."){
+              style = "-fx-font-weight: normal;"
               onAction = (event) => saveGame(false)
             },
             new MenuItem("Reset progress"){
+              style = "-fx-font-weight: normal;"
               onAction = (event) => resetGame()
               accelerator = KeyCombination("Ctrl + R")
             },
             new MenuItem("Exit"){
+              style = "-fx-font-weight: normal;"
               onAction = (event) => exitGame()
               accelerator = KeyCombination("Ctrl + X")
             }
@@ -98,7 +116,7 @@ object sudokuApp extends JFXApp3:
     menuBar.background = Background(Array(new BackgroundFill((Gray), CornerRadii.Empty, Insets.Empty)))
     menuBar
 
-  private def setUpBoard(): GridPane =
+  private def setUpBoard()  : GridPane =
     def getBorderWidths(i: Int, j: Int): BorderWidths =
       new BorderWidths(
         if i % 3 == 0 then 3 else 2,
@@ -108,24 +126,32 @@ object sudokuApp extends JFXApp3:
       )
     val boardSquare = new GridPane():
       alignment = Pos.Center
-    var boardSquareArray = (0 to 8).toArray.map( x => Array.ofDim[StackPane](9) )
     for
       i <- (0 to 8)
       j <- (0 to 8)
     do
-      valuesInTheSquare(i)(j).value = gameHandler.getGrid.getGridCells(j)(i).getValue
+      valuesInTheSquare(i)(j).value = gameHandler.getGrid.getGridCells(i)(j).getValue
       val insideText  = new Text(if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString):
         font = Font("Niagara Solid", FontWeight.SemiBold, 30)
       valuesInTheSquare(i)(j).addListener(
-        (_, _, newValue) =>
-          gameHandler.insertValue(newValue.intValue())
+        (_, oldValue, newValue) =>
+          val old = oldValue.intValue()
+          val upd = newValue.intValue()
+          gameHandler.insertValueAt(upd, i, j)
+          isMyGridFull.value = gameHandler.isGridFull
+          if old != 0 then activationTrackingProperty(old - 1).value = (0 to 8).toSet.flatMap( x => (0 to 8).map( y => (y, x) )).count(pos => gameHandler.numberAt(pos._1, pos._2) == old) == 9
+          if upd != 0 then activationTrackingProperty(upd - 1).value = (0 to 8).toSet.flatMap( x => (0 to 8).map( y => (y, x) )).count(pos => gameHandler.numberAt(pos._1, pos._2) == upd) == 9
           insideText.text = if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString
       )
 
       val smallSquare = new StackPane:
-        style     <== when(selectedPos === (i, j)) choose "-fx-background-color: green;" otherwise "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
-        onMouseEntered = (_) => gameHandler.possibleValuesAt((i, j)).foreach( i => numberedButtons(i - 1).style = "-fx-background-color: yellow ;")
-        onMouseExited  = (_) => gameHandler.possibleValuesAt((i, j)).foreach( i => numberedButtons(i - 1).style = "-fx-background-color: #b8c6db;")
+        style          = if selectedPos.value == (i, j) then "-fx-background-color: green;" else "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
+        onMouseEntered = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
+          i => if !activationTrackingProperty(i - 1).value then numberedButtons(i - 1).style = "-fx-background-color: yellow ;"
+        )
+        onMouseExited  = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
+          i => numberedButtons(i - 1).style = "-fx-background-color: #b8c6db;"
+        )
         onMouseClicked = (_) => selectedPos.value = (i, j)
 
       val smallSquareVisual = new Region:
@@ -152,31 +178,51 @@ object sudokuApp extends JFXApp3:
       boardSquareArray(x)(y).children += anchor
     boardSquare
 
-  private def setUpBottom(): HBox =
+  private def setUpBottom() : GridPane =
+    val buttons = new GridPane:
+      padding   = Insets(10)
+      alignment = Pos.Center
+      columnConstraints =  (0 to 10).map(_ => new ColumnConstraints(){percentWidth = 100.0 / 11})
+
     numberedButtons   = (1 to 9).toSeq.map( i => new Button(i.toString){
       padding  = Insets(BOTTOM_ROW_PADDING)
+      alignmentInParent = Pos.Center
       style    = "-fx-background-color: #b8c6db;"
       focusTraversable = false
-      onAction = ((_) => if selectedPos.value != (-1, -1) then updateTable(i))})
-    val buttons = new HBox:
-      spacing   = 10
-      padding   = Insets(10)
-      children  = numberedButtons
-    buttons.children += new Button("Delete"):
+      effect = new DropShadow()
+      disable <== activationTrackingProperty(i - 1)
+      onMouseEntered = (_)  =>
+        (0 to 8).flatMap( x => (0 to 8).map( y => (y, x) ))
+          .filter( pos => gameHandler.numberAt(pos._1, pos._2) == i )
+          .foreach( pos => boardSquareArray(pos._1)(pos._2).style = "-fx-background-color: #ffffff;")
+      onMouseExited = (_)   =>
+        (0 to 8).flatMap( x => (0 to 8).map( y => (y, x) ))
+          .filter( pos => gameHandler.numberAt(pos._1, pos._2) == i )
+          .foreach( pos => boardSquareArray(pos._1)(pos._2).style = "-fx-background-color:" + gameHandler.getGrid.getRegionsMap(pos) + ";")
+        boardSquareArray(selectedPos.value._1)(selectedPos.value._2).style = "-fx-background-color: green;"
+      onMouseClicked = ((_) => if selectedPos.value != (-1, -1) then updateTable(i))})
+    (0 to 8).foreach(i => buttons.add(numberedButtons(i), i, 0))
+
+    buttons.add(new Button("Delete"){
       padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
       focusTraversable = false
       style    = "-fx-background-color: #b8c6db;"
-      onAction = (event) => if selectedPos.value != (-1, -1) then updateTable(0)
-    buttons.children += new Button("Check"):
+      alignmentInParent = Pos.Center
+      effect = new DropShadow()
+      onMouseClicked = (event) => if selectedPos.value != (-1, -1) then updateTable(0)}, 9, 0)
+    buttons.add(new Button("Check") {
       padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
-//      margin  = Insets(0, 0, 0, 15)
       focusTraversable = false
-      style    = "-fx-background-color: #b8c6db;"
-      onAction = (event) => if selectedPos.value != (-1, -1) then updateTable(0)
+      alignmentInParent = Pos.Center
+      onMouseClicked = (event) => endGame()
+      disable <== !isMyGridFull
+      effect = new DropShadow()
+    }, 10, 0)
 
     buttons
 
-  private def updateTable(i: Int) = valuesInTheSquare(selectedPos.value._1)(selectedPos.value._2).value = i
+  private def updateTable(i: Int) =
+    if i == 0 || !activationTrackingProperty(i - 1).value then valuesInTheSquare(selectedPos.value._1)(selectedPos.value._2).value = i
 
   private def setUpBubble(): StackPane =
     val bubbleVisual = new Region:
@@ -207,8 +253,14 @@ object sudokuApp extends JFXApp3:
       prefHeight = 330
 
     selectedPos.onChange(
-      (_, _, newValue) =>
-        if newValue != (-1, -1) then gameHandler.select(newValue) else gameHandler.deselect()
+      (_, oldValue, newValue) =>
+        if oldValue != (-1, -1) then
+          boardSquareArray(oldValue._1)(oldValue._2).style = "-fx-background-color: " + gameHandler.getGrid.getRegionsMap(oldValue) + ";"
+        if newValue != (-1, -1) then
+          gameHandler.select(newValue)
+          boardSquareArray(newValue._1)(newValue._2).style = "-fx-background-color: green;"
+        else
+          gameHandler.deselect()
         contentVBox.children = gameHandler.getBubble.toSeq.map( arr => arr.sorted ).sortBy(arr => (arr(0), arr(1)) ).map(
             x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)}
           )
@@ -263,27 +315,33 @@ object sudokuApp extends JFXApp3:
       pushDialogue(stage, Alert.AlertType.Warning, "Warning!", "Can't save an empty game.",
         "Please first open a game in order to save it.")
 
-  private def loadGame() =
+  private def loadGame(): Unit   =
     try
       val selectedFile = fileChooser.showOpenDialog(stage)
       if selectedFile != null then
-        valuesInTheSquare = ( (0 until 9).map( i => (0 until 9).map( j => IntegerProperty(0) ).toArray ).toArray )
-        selectedPos.value = (-1, -1)
         gameHandler = GameHandler.loadGame(selectedFile.toString)
+        selectedPos.value = (-1, -1)
+        valuesInTheSquare = ( (0 until 9).map( i => (0 until 9).map( j => IntegerProperty(gameHandler.numberAt(i, j)) ).toArray ).toArray )
+        isMyGridFull.value = gameHandler.isGridFull
+        for
+          i <- 1 to 9
+        do
+          activationTrackingProperty(i - 1).value = (0 to 8).toSet.flatMap( x => (0 to 8).map( y => (y, x) )).count( pos => gameHandler.numberAt(pos._1, pos._2) == i ) == 9
 
         val myBorderPane = stage.scene.getValue.lookup("#abecedar").asInstanceOf[javafx.scene.layout.BorderPane]
+        myBorderPane.bottom = setUpBottom()
         myBorderPane.center = setUpBoard()
         myBorderPane.right  = setUpBubble()
-        myBorderPane.bottom = setUpBottom()
     catch
       case e: BadFilePathException   => pushDialogue(stage, Alert.AlertType.Error, "Error", "Bad File Path" , e.getMessage)
       case e: CorruptedFileException => pushDialogue(stage, Alert.AlertType.Error, "Error", "Corrupted File", e.description)
       case e: UnknownException       => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown Exception", e.description)
       case e: Exception              => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown Exception", e.getMessage)
 
-  private def resetGame() =
+  private def resetGame(): Unit  =
     try
       selectedPos.value = (-1, -1)
+      gameHandler.resetGame()
       valuesInTheSquare.foreach(
         arr => arr.foreach(
           intProp =>
@@ -291,15 +349,15 @@ object sudokuApp extends JFXApp3:
         )
       )
     catch
-      case e: Exception              => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unkwonn Exception", e.getMessage)
+      case e: Exception => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unkwonn Exception", e.getMessage)
 
-  private def exitGame() =
+  private def exitGame(): Unit   =
     if gameHandler == null then
       stage.close()
     else
       val buttonSaveTo = new ButtonType("Save, then exit")
-      val buttonExit   = new ButtonType("Exit without saving")
-      new Alert(Alert.AlertType.Confirmation){
+      val buttonExit = new ButtonType("Exit without saving")
+      new Alert(Alert.AlertType.Confirmation) {
         initOwner(stage)
         title = "Confirm Exit"
         headerText = "Do you want to save your game before exiting?"
@@ -308,8 +366,23 @@ object sudokuApp extends JFXApp3:
         case Some(`buttonSaveTo`) =>
           saveGame(false)
           stage.close()
-        case Some(`buttonExit`)   =>
+        case Some(`buttonExit`) =>
           stage.close()
-        case _                  =>
-          ()
+        case _ =>
+
+  private def endGame()    =
+    if gameHandler.isGridCorrect then
+      val result = new Alert(Alert.AlertType.Information) {
+        initOwner(stage)
+        title = "Congratulations!"
+        headerText = "You've won the game."
+        contentText = "How do you want to proceed?"
+        buttonTypes = Seq(new ButtonType("Exit the app"), new ButtonType("Reset the game"), new ButtonType("Close pop-up window"))
+      }.showAndWait()
+      result.map( _.text.toLowerCase.head ).getOrElse("") match
+        case 'e' =>  exitGame()
+        case 'r' => resetGame()
+        case _   => ()
+    else
+      pushDialogue(stage, Alert.AlertType.Warning, "Incorrect table.", "Hmmm... it seems like you made a mistake somewhere.", "")
 end sudokuApp

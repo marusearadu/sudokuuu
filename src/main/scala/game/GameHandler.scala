@@ -13,6 +13,10 @@ import scala.util.Random.nextInt
 
 
 class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private var grid: Grid):
+  def numberAt(posX: Int, posY: Int): Int =
+    require(0 <= posX && posX <= 8 && 0 <= posY && posY <= 8, "Invalid coordinates were passed.")
+    this.getGridCells(posX)(posY).getValue
+  
   /** Returns the currently selected cell, if any. */
   private def selectedCell: Option[GridCell] = this.selectedPos.map( x => this.getGridCells(x._1)(x._2) )
 
@@ -74,10 +78,10 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
   def         isGridFull    : Boolean = getGridCells.flatten.forall( _.isNonEmpty )
 
   /** Checks whether all the rows of the grid are correct. */
-  private def areRowsCorrect: Boolean = this.getGridCells.forall( _.toSet == (1 to 9).toSet )
+  private def areRowsCorrect: Boolean = this.getGridCells.forall( _.map( _.getValue ).toSet == (1 to 9).toSet)
 
   /** Checks whether all the columns of the grid are correct. */
-  private def areColsCorrect: Boolean = this.getGridCells.transpose.forall( _.toSet == (1 to 9).toSet )
+  private def areColsCorrect: Boolean = this.getGridCells.transpose.forall( _.map( _.getValue ).toSet == (1 to 9).toSet )
 
   /** Checks whether all the squares of the grid are correct. */
   private def areSqrsCorrect: Boolean =
@@ -97,11 +101,15 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
 
   /** Checks whether the grid is correct (i.e., whether all the rows, columns, squares, and regions are correct, and
    *  whether the grid is full). */
-  def         isGridCorrect : Boolean = isGridFull && areRowsCorrect && areColsCorrect && areSqrsCorrect && areRegsCorrect
+  def         isGridCorrect : Boolean = areRowsCorrect && areColsCorrect && areSqrsCorrect && areRegsCorrect
 
   /** Inserts the given value into the selected cell (if there is one). */
   def   insertValue(newValue: Int): Unit =
     this.selectedCell.foreach( _.setValue(newValue) )
+
+  def insertValueAt(newValue: Int, posX: Int, posY: Int): Unit =
+    require(0 <= posX && posX <= 8 && 0 <= posY && posY <= 8, "Invalid coordinates were passed.")
+    this.getGridCells(posX)(posY).setValue(newValue)
 
   // un-make this function private in order to easily test in the sbt console
   /** Creates a pretty, terminal-friendly string of the current state of the sudoku game. */
