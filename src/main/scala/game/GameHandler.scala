@@ -144,7 +144,7 @@ object GameHandler:
     var returnGrid: Grid = null
 
     def colorGraph(graph: Map[GridRegion, Set[GridRegion]]): Map[(Int, Int), String] =
-      val colors: Buffer[String] = Buffer[String]("#e5de00", "#e3242b", "#1338be", "#a45ee5")
+      val colors: Buffer[String] = Buffer[String]("#03465a", "#eaa406", "#ba4c24", "#e49979", "#a2a3c1", "#6d8a88")
       val gridRegionList = graph.keys.toArray
       gridRegionList.head.setColor(colors.head)
 
@@ -187,7 +187,14 @@ object GameHandler:
         val newGridRegion = GridRegion(regionSum, cellPositions)
 
         setOfGridRegions += newGridRegion
-        (cellPositions zip cellValues).foreach(((x, y) => gameGrid(x._1)(x._2) = GridCell(newGridRegion, y)))
+        (cellPositions zip cellValues).foreach((
+          (x, y) =>
+            if gameGrid(x._1)(x._2) == null then
+              gameGrid(x._1)(x._2) = GridCell(newGridRegion, y)
+            else
+              throw CorruptedFileException("There are some overlapping regions. ")
+          )
+        )
 
       returnGrid = Grid(
         gameGrid, 

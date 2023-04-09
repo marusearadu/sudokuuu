@@ -23,8 +23,9 @@ import scalafx.scene.effect.{DropShadow, Effect}
 
 // TODO: NUMBERED_BUTTONS GET STUCK ON THEIR COLOR (M)
 //  WEIRD BUT THE 'X' BUTTON IN ENDGAME DOESN'T CLOSE WHEN PRESSED (M)
-//  EDIT THE VIEW (A)
+//  DO I NEED GUI TESTING? (M)
 //  testing
+//  comment code
 
 object sudokuApp extends JFXApp3:
   // now i do realize that probably just inserting
@@ -146,7 +147,7 @@ object sudokuApp extends JFXApp3:
       )
 
       val smallSquare = new StackPane:
-        style          = if selectedPos.value == (i, j) then "-fx-background-color: green;" else "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
+        style          = if selectedPos.value == (i, j) then "-fx-background-color: #f0b846;" else "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
         onMouseEntered = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
           i => if !activationTrackingProperty(i - 1).value then numberedButtons(i - 1).style = "-fx-background-color: yellow ;"
         )
@@ -195,12 +196,12 @@ object sudokuApp extends JFXApp3:
       onMouseEntered = (_)  =>
         (0 to 8).flatMap( x => (0 to 8).map( y => (y, x) ))
           .filter( pos => gameHandler.numberAt(pos._1, pos._2) == i )
-          .foreach( pos => boardSquareArray(pos._1)(pos._2).style = "-fx-background-color: #ffffff;")
+          .foreach( pos => boardSquareArray(pos._1)(pos._2).style = "-fx-background-color: #FAF9F6;")
       onMouseExited = (_)   =>
         (0 to 8).flatMap( x => (0 to 8).map( y => (y, x) ))
           .filter( pos => gameHandler.numberAt(pos._1, pos._2) == i )
           .foreach( pos => boardSquareArray(pos._1)(pos._2).style = "-fx-background-color:" + gameHandler.getGrid.getRegionsMap(pos) + ";")
-        boardSquareArray(selectedPos.value._1)(selectedPos.value._2).style = "-fx-background-color: green;"
+        if selectedPos.value != (-1, -1) then boardSquareArray(selectedPos.value._1)(selectedPos.value._2).style = "-fx-background-color: #f0b846;"
       onMouseClicked = ((_) => if selectedPos.value != (-1, -1) then updateTable(i))})
     (0 to 8).foreach(i => buttons.add(numberedButtons(i), i, 0))
 
@@ -231,10 +232,11 @@ object sudokuApp extends JFXApp3:
       maxWidth = 400
       minHeight = 400
       maxHeight = 400
-      background = Background(Array(new BackgroundFill((Yellow), CornerRadii(15), Insets(0, 20, 0, 0))))
+      effect = new DropShadow()
+      background = Background(Array(new BackgroundFill(("#a2a4c1"), CornerRadii(5), Insets(0, 20, 0, 0))))
     bubbleVisual.border = new Border(new BorderStroke(Black, Black, Black, Black,
       BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid,
-      CornerRadii(5), BorderWidths(10),
+      CornerRadii(5), BorderWidths(2),
       Insets(0, 20, 0, 0)))
 
     val title = new Text("Possible sum-splits for the selected region: \n(note: only possible permutations shown)"):
@@ -247,18 +249,22 @@ object sudokuApp extends JFXApp3:
     val textScrollPane = new ScrollPane:
       translateX = 12
       translateY = 53
-      style      = "-fx-background: yellow"
+      style      = "-fx-background: #a2a3c1"
       content    = contentVBox
       prefWidth  = 350
       prefHeight = 330
 
-    val selectCellToSeeCombos = new StackPane:
+    val selectCellToSeeCombos = new VBox():
+      alignment = Pos.Center
       translateX = 12
       translateY = 53
-      style      = "-fx-background: yellow"
+      style      = "-fx-background: #a2a3c1"
       prefWidth  = 350
       prefHeight = 330
-      children = Seq(new Text("Select/press on a cell to see possible sum-splits."){font = Font("Times New Roman", FontWeight.Normal, 18)})
+      children = Seq(
+        new Text("Select/press on a cell"){font = Font("Times New Roman", FontWeight.Normal, 18)},
+        new Text("to see possible sum-splits."){font = Font("Times New Roman", FontWeight.Normal, 18)}
+      )
     val switchablePane = new Pane:
       children = if selectedPos.value == (-1, -1) then selectCellToSeeCombos else textScrollPane
 
@@ -268,7 +274,7 @@ object sudokuApp extends JFXApp3:
           boardSquareArray(oldValue._1)(oldValue._2).style = "-fx-background-color: " + gameHandler.getGrid.getRegionsMap(oldValue) + ";"
         if newValue != (-1, -1) then
           gameHandler.select(newValue)
-          boardSquareArray(newValue._1)(newValue._2).style = "-fx-background-color: green;"
+          boardSquareArray(newValue._1)(newValue._2).style = "-fx-background-color: #f0b846;"
           switchablePane.children = textScrollPane
         else
           gameHandler.deselect()
@@ -328,6 +334,19 @@ object sudokuApp extends JFXApp3:
         "Please first open a game in order to save it.")
 
   private def loadGame(): Unit   =
+    if gameHandler != null then
+      val buttonSaveTo = new ButtonType("Save, then open")
+      val buttonExit = new ButtonType("Open without saving")
+      new Alert(Alert.AlertType.Confirmation) {
+        initOwner(stage)
+        title = "Confirm Exit"
+        headerText = "Do you want to save your game before exiting?"
+        buttonTypes = Seq(buttonSaveTo, buttonExit, ButtonType.Cancel)
+      }.showAndWait() match
+        case Some(`buttonSaveTo`) =>
+          saveGame()
+        case Some(`buttonExit`) =>
+        case _ => return ()
     try
       val selectedFile = fileChooser.showOpenDialog(stage)
       if selectedFile != null then
@@ -382,7 +401,7 @@ object sudokuApp extends JFXApp3:
           stage.close()
         case _ =>
 
-  private def endGame()    =
+  private def endGame(): Unit    =
     if gameHandler.isGridCorrect then
       val result = new Alert(Alert.AlertType.Information) {
         initOwner(stage)
