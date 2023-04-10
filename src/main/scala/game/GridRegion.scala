@@ -33,6 +33,10 @@ class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], priva
     (this.getNumberOfCells * 1.5).toInt <= sum && sum <= (10 * this.getNumberOfCells) - (this.getNumberOfCells * 1.5).toInt
 
   private def isContiguous: Boolean =
+    def getNeighboursInTheSet(pos: (Int, Int)) =
+      // the function uses the fact that we already know that our grid
+      // has a rectangular shape and that neighbours share an edge
+      Set((pos._1 - 1, pos._2), (pos._1 + 1, pos._2), (pos._1, pos._2 - 1), (pos._1, pos._2 + 1)).intersect(cells)
     // Assumption that the set has at least 1 element
     var passedThrough = Set(cells.head)
     var neighbours = getNeighboursInTheSet(passedThrough.head)
@@ -45,12 +49,6 @@ class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], priva
       if neighbours == cells then return true
 
     neighbours == cells
-
-  private def getNeighboursInTheSet(pos: (Int, Int)) =
-  // the function uses the fact that we already know that our grid
-  // has a rectangular shape and that neighbours share an edge
-    Set((pos._1 - 1, pos._2), (pos._1 + 1, pos._2), (pos._1, pos._2 - 1), (pos._1, pos._2 + 1))
-      .intersect(cells)
 
   override def toString: String =
     "" + this.getNumberOfCells + " cells: {" + this.getCells.mkString("; ") + "} with sum " + this.getSum + " and color " + this.getColor

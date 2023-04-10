@@ -17,7 +17,7 @@ class GridCell(private var region: GridRegion, private var value: Int = 0):
     this.region = newRegion
 
   override def toString: String =
-    "A" + (if value != 0 then " game.GridCell with value " + this.value else "n empty Gridcell")
+    "A" + (if value != 0 then " GridCell with value " + this.value else "n empty Gridcell")
 
   override def equals(obj: Any): Boolean =
     obj match

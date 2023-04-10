@@ -24,7 +24,7 @@ import scalafx.scene.effect.{DropShadow, Effect}
 // TODO: NUMBERED_BUTTONS GET STUCK ON THEIR COLOR (M)
 //  WEIRD BUT THE 'X' BUTTON IN ENDGAME DOESN'T CLOSE WHEN PRESSED (M)
 //  DO I NEED GUI TESTING? (M)
-//  testing
+//  DID I DO ENOUGH TESTING? MAYBE GridRegion.isContiguous? (M)
 //  comment code
 
 object sudokuApp extends JFXApp3:
