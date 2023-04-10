@@ -147,9 +147,9 @@ object sudokuApp extends JFXApp3:
       )
 
       val smallSquare = new StackPane:
-        style          = if selectedPos.value == (i, j) then "-fx-background-color: #f0b846;" else "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
+        style          = if selectedPos.value == (i, j) then "-fx-background-color: green;" else "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
         onMouseEntered = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
-          i => if !activationTrackingProperty(i - 1).value then numberedButtons(i - 1).style = "-fx-background-color: yellow ;"
+          i => if !activationTrackingProperty(i - 1).value then numberedButtons(i - 1).style = "-fx-background-color: #f0b846 ;"
         )
         onMouseExited  = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
           i => numberedButtons(i - 1).style = "-fx-background-color: #b8c6db;"
@@ -201,7 +201,7 @@ object sudokuApp extends JFXApp3:
         (0 to 8).flatMap( x => (0 to 8).map( y => (y, x) ))
           .filter( pos => gameHandler.numberAt(pos._1, pos._2) == i )
           .foreach( pos => boardSquareArray(pos._1)(pos._2).style = "-fx-background-color:" + gameHandler.getGrid.getRegionsMap(pos) + ";")
-        if selectedPos.value != (-1, -1) then boardSquareArray(selectedPos.value._1)(selectedPos.value._2).style = "-fx-background-color: #f0b846;"
+        if selectedPos.value != (-1, -1) then boardSquareArray(selectedPos.value._1)(selectedPos.value._2).style = "-fx-background-color: green;"
       onMouseClicked = ((_) => if selectedPos.value != (-1, -1) then updateTable(i))})
     (0 to 8).foreach(i => buttons.add(numberedButtons(i), i, 0))
 
@@ -214,6 +214,7 @@ object sudokuApp extends JFXApp3:
       onMouseClicked = (event) => if selectedPos.value != (-1, -1) then updateTable(0)}, 9, 0)
     buttons.add(new Button("Check") {
       padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
+      style    = "-fx-background-color: #b8c6db;"
       focusTraversable = false
       alignmentInParent = Pos.Center
       onMouseClicked = (event) => endGame()
@@ -274,7 +275,7 @@ object sudokuApp extends JFXApp3:
           boardSquareArray(oldValue._1)(oldValue._2).style = "-fx-background-color: " + gameHandler.getGrid.getRegionsMap(oldValue) + ";"
         if newValue != (-1, -1) then
           gameHandler.select(newValue)
-          boardSquareArray(newValue._1)(newValue._2).style = "-fx-background-color: #f0b846;"
+          boardSquareArray(newValue._1)(newValue._2).style = "-fx-background-color: green;"
           switchablePane.children = textScrollPane
         else
           gameHandler.deselect()

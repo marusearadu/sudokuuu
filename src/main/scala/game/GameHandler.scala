@@ -23,17 +23,27 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
   /** Calculates the possible sums of an non-full region.
    * In case the region is full, it returns an empty Set[Array[Int]]*/
   private def possibleSumsOfARegion(region: GridRegion): Set[Array[Int]] =
-    var possibleSums: Set[Array[Int]] = Set(Array())
-    val theCellValues = region.getCells.toArray.map( x => this.getGridCells(x._1)(x._2).getValue )
-    val emptyCells = theCellValues.filter( _ == 0 )
-    val emptyCellsSum = region.getSum - theCellValues.filter( _ != 0 ).sum
+    var possibleSums: Set[Array[Int]]   = Set(Array())
+    val theCells: Set[(Int, Int)]       = region.getCells
+    val emptyCells: Set[(Int, Int)]     = theCells.filter( x => this.numberAt(x._1, x._2) == 0 )
+    val existingValues: Array[Int]      = theCells.diff(emptyCells).toArray.map( x => this.numberAt(x._1, x._2) )
+    val distinctVals: Int               = Vector(
+      theCells.groupBy( _._1 ).map( (_, x) => x.size ).max,
+      theCells.groupBy( _._2 ).map( (_, x) => x.size ).max,
+      theCells.size + 1 - theCells.groupBy(((x, y) => (x / 3, y / 3))).size
+    ).max
 
-    for i <- emptyCells.indices do
+    for i <- (0 until theCells.size) do
       possibleSums = (1 to 9).toSet.flatMap( x => possibleSums.map( y => y ++ Array(x) ))
 
     // possibleSums will have a lot of arrays that are identical up to a permutation
     // to get rid of them, we just group them by their respective idential sets and choose a random element
-    possibleSums.filter( _.sum == emptyCellsSum ).groupBy( _.toSet ).map( (x, y) => y.head.sorted ).toSet
+    possibleSums
+      .filter(_.sum == region.getSum) // getting all the possible sums for the original region
+      .groupBy(_.toSet) // grouping them by the Set they represent
+      .filter(((x, _) => x.size >= distinctVals && existingValues.forall(x.contains(_))))    // filtering out the "basic" ones
+      .map( (_, y) => y.head.diff(existingValues).sorted )             // getting one element out of each
+      .toSet
 
   /**
    * Returns the possible values that can be placed at the specified position without
