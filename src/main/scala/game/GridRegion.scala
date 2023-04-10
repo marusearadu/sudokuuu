@@ -53,7 +53,7 @@ class GridRegion(private val sum: Int, private val cells: Set[(Int, Int)], priva
       .intersect(cells)
 
   override def toString: String =
-    "" + this.getNumberOfCells + " cells: {" + this.getCells.mkString("; ") + "} with sum " + this.getSum + " and color " + this.getColor + "."
+    "" + this.getNumberOfCells + " cells: {" + this.getCells.mkString("; ") + "} with sum " + this.getSum + " and color " + this.getColor
 
   override def equals(obj: Any): Boolean =
     obj match

@@ -132,7 +132,7 @@ object sudokuApp extends JFXApp3:
       i <- (0 to 8)
       j <- (0 to 8)
     do
-      valuesInTheSquare(i)(j).value = gameHandler.getGrid.getGridCells(i)(j).getValue
+      valuesInTheSquare(i)(j).value = gameHandler.numberAt(i, j)
       val insideText  = new Text(if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString):
         font = Font("Niagara Solid", FontWeight.SemiBold, 30)
       valuesInTheSquare(i)(j).addListener(
