@@ -53,6 +53,7 @@ object sudokuApp extends JFXApp3:
   private var numberedButtons: Seq[Button]                       = _
 
   override def start(): Unit =
+    // Using fixed-length window sizes because otherwise it becomes quite the mess
     stage = new JFXApp3.PrimaryStage:
       title     = "Killer Sudoku"
       width     = WINDOW_WIDTH
@@ -66,11 +67,10 @@ object sudokuApp extends JFXApp3:
         exitGame()
 
     val root = new BorderPane:
-      focusTraversable = true
       top    = setUpMenuBar()
-      bottom = new Pane()
-      right  = new Pane()
-      left   = new Pane()
+      bottom = new Pane()     // place-holder Pane, to be filled once a game file has been chosen
+      right  = new Pane()     // place-holder Pane, to be filled once a game file has been chosen
+      left   = new Pane()     // place-holder Pane, to be filled once a game file has been chosen
       center = new StackPane{
         children = List(new Text("To start a game, double click here or go 'Game > Open...' and select a file."){font = Font("Times New Roman", FontWeight.Normal, 18)})
         onMouseClicked =
@@ -81,6 +81,7 @@ object sudokuApp extends JFXApp3:
     stage.scene = new Scene(parent = root, WINDOW_WIDTH, WINDOW_HEIGHT)
     setUpControls()
 
+  /** Sets up the window's MenuBar; gets called once, at the beginning. */
   private def setUpMenuBar(): MenuBar  =
     val menuBar = new MenuBar{
       menus = Seq(
@@ -118,7 +119,10 @@ object sudokuApp extends JFXApp3:
     menuBar.background = Background(Array(new BackgroundFill((Gray), CornerRadii.Empty, Insets.Empty)))
     menuBar
 
+  /** Sets up the visual representation of the sudoku grid. */
   private def setUpBoard()  : GridPane =
+    // Cells bordering the edge of a 3x3 square need to be a bit thicker
+    // Hence, a private method giving out the BorderWidth needed for all the cells
     def getBorderWidths(i: Int, j: Int): BorderWidths =
       new BorderWidths(
         if i % 3 == 0 then 3 else 2,
@@ -126,15 +130,25 @@ object sudokuApp extends JFXApp3:
         if i % 3 == 2 then 3 else 2,
         if j % 3 == 0 then 3 else 2
       )
+
+    // The Pane holding the visual representation of whole sudoku grid
     val boardSquare = new GridPane():
       alignment = Pos.Center
+
+    // filling up this Pane
     for
       i <- (0 to 8)
       j <- (0 to 8)
     do
+      // first, setting some values for the valuesInTheSquare IntegerProperty-s
       valuesInTheSquare(i)(j).value = gameHandler.numberAt(i, j)
+
+      // the text displaying the value inside of the cell
       val insideText  = new Text(if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString):
         font = Font("Niagara Solid", FontWeight.SemiBold, 30)
+
+      // adding a listener for changes inside the valuesInTheSquare property
+      // it handles all the actions happening when the user inserts/deletes a new value on the table
       valuesInTheSquare(i)(j).addListener(
         (_, oldValue, newValue) =>
           val old = oldValue.intValue()
@@ -146,16 +160,7 @@ object sudokuApp extends JFXApp3:
           insideText.text = if valuesInTheSquare(i)(j).value == 0 then " " else valuesInTheSquare(i)(j).value.toString
       )
 
-      val smallSquare = new StackPane:
-        style          = if selectedPos.value == (i, j) then "-fx-background-color: green;" else "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
-        onMouseEntered = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
-          i => if !activationTrackingProperty(i - 1).value then numberedButtons(i - 1).style = "-fx-background-color: #f0b846 ;"
-        )
-        onMouseExited  = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
-          i => numberedButtons(i - 1).style = "-fx-background-color: #b8c6db;"
-        )
-        onMouseClicked = (_) => selectedPos.value = (i, j)
-
+      // the visual representation of the cell (i.e., a square with some background color)
       val smallSquareVisual = new Region:
         minWidth  = SQUARE_SIZE
         maxWidth  = SQUARE_SIZE
@@ -165,9 +170,27 @@ object sudokuApp extends JFXApp3:
         BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid, BorderStrokeStyle.Solid,
         CornerRadii.Empty, getBorderWidths(i, j), Insets.Empty))
 
+      // the Pane that is going to hold the 2 things created above - the text, "stacked" over the cell representation
+      val smallSquare = new StackPane:
+        style          = if selectedPos.value == (i, j) then "-fx-background-color: green;" else "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
+        onMouseEntered = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
+          i => if !activationTrackingProperty(i - 1).value then numberedButtons(i - 1).style = "-fx-background-color: #f0b846 ;"
+        ) // coloring the buttons representing possible cell-values in yellow
+        onMouseExited  = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
+          i => numberedButtons(i - 1).style = "-fx-background-color: #b8c6db;"
+        ) // reverting the buttons to their original color
+        onMouseClicked = (_) => selectedPos.value = (i, j) // changing the selectedPos value
+
+      // actually adding the text & the physical representation to the common-holder
       smallSquare.children ++= Seq(smallSquareVisual, insideText)
+      // adding the holder to the sudoku-grid
       boardSquare.add(smallSquare, j, i)
+      // setting the boardSquareArray to smallSquare
       boardSquareArray(i)(j) = smallSquare
+
+    // all this other for-loop does is:
+    // for each region, draw the number representing the region's sum
+    // in the region's top-left-most corner
     for
       (x, y) <- gameHandler.getGrid.getRegions.map( region => region.getCells.minBy((_ + _)) )
     do
@@ -180,12 +203,18 @@ object sudokuApp extends JFXApp3:
       boardSquareArray(x)(y).children += anchor
     boardSquare
 
+  /** Sets up the lower line-of-buttons. */
   private def setUpBottom() : GridPane =
+    // setting up the grid that's going to contain the buttons
     val buttons = new GridPane:
       padding   = Insets(10)
       alignment = Pos.Center
       columnConstraints =  (0 to 10).map(_ => new ColumnConstraints(){percentWidth = 100.0 / 11})
 
+    // first, we deal with the numbered buttons
+    // we bind their able/disable attribute to their activation tracking property
+    // and for hovering we color the cells on the grid containing the respective number
+    // for click, we obviously color insert a number
     numberedButtons   = (1 to 9).toSeq.map( i => new Button(i.toString){
       padding  = Insets(BOTTOM_ROW_PADDING)
       alignmentInParent = Pos.Center
@@ -203,8 +232,9 @@ object sudokuApp extends JFXApp3:
           .foreach( pos => boardSquareArray(pos._1)(pos._2).style = "-fx-background-color:" + gameHandler.getGrid.getRegionsMap(pos) + ";")
         if selectedPos.value != (-1, -1) then boardSquareArray(selectedPos.value._1)(selectedPos.value._2).style = "-fx-background-color: green;"
       onMouseClicked = ((_) => if selectedPos.value != (-1, -1) then updateTable(i))})
-    (0 to 8).foreach(i => buttons.add(numberedButtons(i), i, 0))
+    (0 to 8).foreach(i => buttons.add(numberedButtons(i), i, 0)) // adding the numbers to the line
 
+    // button to delete cell values on the board
     buttons.add(new Button("Delete"){
       padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
       focusTraversable = false
@@ -212,6 +242,8 @@ object sudokuApp extends JFXApp3:
       alignmentInParent = Pos.Center
       effect = new DropShadow()
       onMouseClicked = (event) => if selectedPos.value != (-1, -1) then updateTable(0)}, 9, 0)
+    // button to check whether the board was completed successfullly
+    // activates only when the board is full
     buttons.add(new Button("Check") {
       padding = Insets(BOTTOM_ROW_PADDING, 2, BOTTOM_ROW_PADDING, 2)
       style    = "-fx-background-color: #b8c6db;"
@@ -224,10 +256,14 @@ object sudokuApp extends JFXApp3:
 
     buttons
 
+  /** Inserts a value inside an IntegerProperty. */
+  // and, obv, triggers the object's onChange method, hence updating the table
   private def updateTable(i: Int) =
     if i == 0 || !activationTrackingProperty(i - 1).value then valuesInTheSquare(selectedPos.value._1)(selectedPos.value._2).value = i
 
+  /** Sets up the square containing the possible sum-splits on the right of the grid. */
   private def setUpBubble(): StackPane =
+    // the "background" of the bubble
     val bubbleVisual = new Region:
       minWidth = 400
       maxWidth = 400
@@ -240,11 +276,13 @@ object sudokuApp extends JFXApp3:
       CornerRadii(5), BorderWidths(2),
       Insets(0, 20, 0, 0)))
 
+    // setting up the title
     val title = new Text("Possible sum-splits for the selected region: \n(note: only possible permutations shown)"):
       font = Font("Times New Roman", FontWeight.ExtraBold, 19)
       translateX = 10
       translateY = 25
 
+    // the actual content, saved in a VBox, which is to be wrapped inside a ScrollPane to facilitate viewing.
     val contentVBox = new VBox:
       children = gameHandler.getBubble.map( x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)} ).toSeq
     val textScrollPane = new ScrollPane:
@@ -255,6 +293,7 @@ object sudokuApp extends JFXApp3:
       prefWidth  = 350
       prefHeight = 330
 
+    // in case there's no selected cell, a default text, contained inside a VBox, appears, urging the user to select a cell
     val selectCellToSeeCombos = new VBox():
       alignment = Pos.Center
       translateX = 12
@@ -266,22 +305,22 @@ object sudokuApp extends JFXApp3:
         new Text("Select/press on a cell"){font = Font("Times New Roman", FontWeight.Normal, 18)},
         new Text("to see possible sum-splits."){font = Font("Times New Roman", FontWeight.Normal, 18)}
       )
-    val switchablePane = new Pane:
+    val switchablePane = new Pane: // the pane which acts as a switch, changing views between selecteCellToSeeCombos & textScrollPane
       children = if selectedPos.value == (-1, -1) then selectCellToSeeCombos else textScrollPane
 
     selectedPos.onChange(
       (_, oldValue, newValue) =>
         if oldValue != (-1, -1) then
-          boardSquareArray(oldValue._1)(oldValue._2).style = "-fx-background-color: " + gameHandler.getGrid.getRegionsMap(oldValue) + ";"
+          boardSquareArray(oldValue._1)(oldValue._2).style = "-fx-background-color: " + gameHandler.getGrid.getRegionsMap(oldValue) + ";" // changing the back the value of the formerly-selected cell
         if newValue != (-1, -1) then
-          gameHandler.select(newValue)
-          boardSquareArray(newValue._1)(newValue._2).style = "-fx-background-color: green;"
-          switchablePane.children = textScrollPane
+          gameHandler.select(newValue) // selecting the new cell inside the gameHandler
+          boardSquareArray(newValue._1)(newValue._2).style = "-fx-background-color: green;" // setting a new background for the newly selected cell
+          switchablePane.children = textScrollPane // setting the sum-splits as the switchable pane content
         else
-          gameHandler.deselect()
-          switchablePane.children = selectCellToSeeCombos
+          gameHandler.deselect()      // deselecting any cell
+          switchablePane.children = selectCellToSeeCombos // switching the content back to "please select a cell..."
         contentVBox.children = gameHandler.getBubble.toSeq.map( arr => arr.sorted ).sortBy(arr => (arr(0), arr(1)) ).map(
-            x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)}
+            x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)} // re-setting the sum-split values
           )
     )
 
@@ -296,20 +335,22 @@ object sudokuApp extends JFXApp3:
     new StackPane():
       children = Seq(new Group(bubbleVisual, title, switchablePane))
 
+  /** Method setting up button controls for the game itself. Called once, at the start of the app. */
   private def setUpControls(): Unit =
     stage.scene.value.onKeyPressed =
       (event: KeyEvent) =>
         if selectedPos.value != (-1, -1) then
           event.code match
-            case key if key.isDigitKey => updateTable(key.getName.last.asDigit)
-            case KeyCode.Left          => selectedPos.value = (selectedPos.value._1, math.max(0, selectedPos.value._2 - 1))
-            case KeyCode.Right         => selectedPos.value = (selectedPos.value._1, math.min(8, selectedPos.value._2 + 1))
-            case KeyCode.Up            => selectedPos.value = (math.max(0, selectedPos.value._1 - 1), selectedPos.value._2)
-            case KeyCode.Down          => selectedPos.value = (math.min(8, selectedPos.value._1 + 1), selectedPos.value._2)
-            case KeyCode.BackSpace     => updateTable(0)
-            case KeyCode.Escape        => selectedPos.value = (-1, -1)
-            case _                     => ()
+            case key if key.isDigitKey => updateTable(key.getName.last.asDigit)                                             // inserting digit values
+            case KeyCode.Left          => selectedPos.value = (selectedPos.value._1, math.max(0, selectedPos.value._2 - 1)) // moving the selected cell to the left
+            case KeyCode.Right         => selectedPos.value = (selectedPos.value._1, math.min(8, selectedPos.value._2 + 1)) // moving the selected cell to the right
+            case KeyCode.Up            => selectedPos.value = (math.max(0, selectedPos.value._1 - 1), selectedPos.value._2) // moving the selected cell up
+            case KeyCode.Down          => selectedPos.value = (math.min(8, selectedPos.value._1 + 1), selectedPos.value._2) // moving the selected cell down
+            case KeyCode.BackSpace     => updateTable(0)                                                                    // removing any cell content, same as pressing 0
+            case KeyCode.Escape        => selectedPos.value = (-1, -1)                                                      // deselecting
+            case _                     => ()                                                                                // nothing
 
+  /** Handy private message to create pop-up windows. */
   private def pushDialogue(stage: Stage, dialogueType: Alert.AlertType, alertTitle: String, header: String, description: String): Option[ButtonType] =
     new Alert(dialogueType) {
       initOwner(stage)
@@ -318,6 +359,7 @@ object sudokuApp extends JFXApp3:
       contentText = description
     }.showAndWait()
 
+  /** Saves the game, by default to the same place, but can also save it to different locations. */
   private def saveGame(samePlace: Boolean = true) =
     if gameHandler != null then
       try
@@ -334,6 +376,7 @@ object sudokuApp extends JFXApp3:
       pushDialogue(stage, Alert.AlertType.Warning, "Warning!", "Can't save an empty game.",
         "Please first open a game in order to save it.")
 
+  /** Loads the game. */
   private def loadGame(): Unit   =
     if gameHandler != null then
       val buttonSaveTo = new ButtonType("Save, then open")
@@ -370,6 +413,7 @@ object sudokuApp extends JFXApp3:
       case e: UnknownException       => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown Exception", e.description)
       case e: Exception              => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unknown Exception", e.getMessage)
 
+  /** Resets all the game progress. */
   private def resetGame(): Unit  =
     try
       selectedPos.value = (-1, -1)
@@ -383,6 +427,7 @@ object sudokuApp extends JFXApp3:
     catch
       case e: Exception => pushDialogue(stage, Alert.AlertType.Error, "Error", "Unkwonn Exception", e.getMessage)
 
+  /** Exits the game. Requires a confirmation before exiting. */
   private def exitGame(): Unit   =
     if gameHandler == null then
       stage.close()
@@ -402,6 +447,7 @@ object sudokuApp extends JFXApp3:
           stage.close()
         case _ =>
 
+  /** Checks the game at the end. In case everything is good, congratulates the user and asks on the user's intended course of action. Otherwise, just tells the user they have a mistake. */
   private def endGame(): Unit    =
     if gameHandler.isGridCorrect then
       val result = new Alert(Alert.AlertType.Information) {

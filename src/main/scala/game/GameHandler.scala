@@ -85,7 +85,7 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
     this.selectedPos = None
 
   /** Checks whether the grid is full. */
-  def         isGridFull    : Boolean = getGridCells.flatten.forall( _.isNonEmpty )
+  def         isGridFull    : Boolean = getGridCells.flatten.forall( _.getValue != 0 )
 
   /** Checks whether all the rows of the grid are correct. */
   private def areRowsCorrect: Boolean = this.getGridCells.forall( _.map( _.getValue ).toSet == (1 to 9).toSet)
