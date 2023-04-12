@@ -203,6 +203,12 @@ class gameBackendTest extends AnyFlatSpec with Matchers:
       (0,2) -> Set(5, 2, 7, 3, 8, 4), (7,6) -> Set(5, 1, 6, 9, 2, 7, 3, 4)
     ))
   )
+  private val savingTestData: Seq[(String, String)] = Seq(
+    ("src\\test\\testFiles\\example1.json", "src\\test\\saveFiles\\example1.json"),
+    ("src\\test\\testFiles\\example2.json", "src\\test\\saveFiles\\example2.json"),
+    ("src\\test\\testFiles\\example3.json", "src\\test\\saveFiles\\example3.json")
+  )
+
   private def areTwoRegionsNeighbouring(region1: GridRegion, region2: GridRegion): Boolean =
     for
       (x1, y1) <- region1.getCells
@@ -210,7 +216,7 @@ class gameBackendTest extends AnyFlatSpec with Matchers:
     do
       if math.abs(x1 - x2) + math.abs(y1 - y2) == 1 then return true
     false
-  
+
   "GameHandler.loadGame(...)" should "load the regions of good JSON files properly. " in {
     for
       (path: String, regions: Array[GridRegion]) <- regionTestData
@@ -223,13 +229,13 @@ class gameBackendTest extends AnyFlatSpec with Matchers:
         withClue("Region " + region.toString + " doesn't get loaded. ") {
           regions should contain (region)
         }
-      for region <- regions do 
+      for region <- regions do
         withClue("Region " + region.toString + " is loaded, but shouldn't actually exist. ") {
           loadedRegions should contain (region)
         }
   }
 
-  "GameHandler.loadGame(...)" should "load the values correctly, given a good test file." in {
+  it should "load the values correctly, given a good test file." in {
     for
       (path: String, values: Map[(Int, Int), Int]) <- valuesTestData
     do
@@ -240,7 +246,7 @@ class gameBackendTest extends AnyFlatSpec with Matchers:
         }
   }
 
-  "GameHandler.loadGame(...)" should "color the adjacent regions differently." in {
+  it should "color the adjacent regions differently." in {
     for
       path <- valuesTestData.map(_._1)
     do
@@ -273,7 +279,7 @@ class gameBackendTest extends AnyFlatSpec with Matchers:
           }
   }
 
-  "gameHandler" should "display the correct possible values for a given cell. " in {
+  it should "display the correct possible values for a given cell. " in {
     for
       (path: String, cellValues: Map[(Int, Int), Set[Int]]) <- cellsVTestData
     do
@@ -288,5 +294,28 @@ class gameBackendTest extends AnyFlatSpec with Matchers:
           withClue("Value " + posVal + " is not suggested by the game, should actually be. "){
             gamePosVals should contain (posVal)
           }
+  }
+
+  // gameSaving is all about making sure that reopening a (game-)file
+  // will result in the same state of the game as when it was saved
+  // so, saving and then reopening a file should do the trick
+  "GameHandler.saveGame(...)" should "save the game in the correct format" in {
+    import scala.util.Random.nextInt
+    for
+      (fromPath: String, toPath: String) <- savingTestData
+    do
+      val oldGame = GameHandler.loadGame(fromPath)
+      // randomly inserting some values into the game
+      (0 until 50).foreach(i => oldGame.insertValueAt(nextInt(10), nextInt(9), nextInt(9)))
+      GameHandler.saveGame(oldGame, toPath)
+      val openedGame = GameHandler.loadGame(toPath)
+      for
+        x <- 0 to 8
+        y <- 0 to 8
+      do
+        withClue("Values at " + (x, y) + " do not coincide: expected" +
+          oldGame.numberAt(x, y) + ", received " + openedGame.numberAt(x, y)){
+          oldGame.numberAt(x, y) should equal (openedGame.numberAt(x, y))
+        }
   }
 end gameBackendTest

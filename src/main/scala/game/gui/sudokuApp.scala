@@ -21,12 +21,7 @@ import scalafx.beans.binding.{Bindings, ObjectBinding}
 import scalafx.beans.value.ObservableValue
 import scalafx.scene.effect.{DropShadow, Effect}
 
-// TODO: NUMBERED_BUTTONS GET STUCK ON THEIR COLOR (M)
-//  WEIRD BUT THE 'X' BUTTON IN ENDGAME DOESN'T CLOSE WHEN PRESSED (M)
-//  DO I NEED GUI TESTING? (M)
-//  DID I DO ENOUGH TESTING? MAYBE GridRegion.isContiguous? (M)
-//  comment code
-
+// TODO: WEIRD BUT THE 'X' BUTTON IN ENDGAME DOESN'T CLOSE WHEN PRESSED (M) ???
 object sudokuApp extends JFXApp3:
   // now i do realize that probably just inserting
   // the whole GameHandler object into an ObjectProperty
@@ -153,6 +148,9 @@ object sudokuApp extends JFXApp3:
         (_, oldValue, newValue) =>
           val old = oldValue.intValue()
           val upd = newValue.intValue()
+          numberedButtons.zipWithIndex.filterNot( (_, i) => activationTrackingProperty(i).value ).map(_._1).foreach(
+            button => button.style = "-fx-background-color: #b8c6db;"
+          )
           gameHandler.insertValueAt(upd, i, j)
           isMyGridFull.value = gameHandler.isGridFull
           if old != 0 then activationTrackingProperty(old - 1).value = (0 to 8).toSet.flatMap( x => (0 to 8).map( y => (y, x) )).count(pos => gameHandler.numberAt(pos._1, pos._2) == old) == 9
@@ -173,10 +171,10 @@ object sudokuApp extends JFXApp3:
       // the Pane that is going to hold the 2 things created above - the text, "stacked" over the cell representation
       val smallSquare = new StackPane:
         style          = if selectedPos.value == (i, j) then "-fx-background-color: green;" else "-fx-background-color: " + gameHandler.getGrid.getRegionsMap((i, j)) + ";"
-        onMouseEntered = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
+        onMouseEntered = (_) => if gameHandler.numberAt(i, j) == 0 then gameHandler.possibleValuesAt((i, j)).foreach(
           i => if !activationTrackingProperty(i - 1).value then numberedButtons(i - 1).style = "-fx-background-color: #f0b846 ;"
         ) // coloring the buttons representing possible cell-values in yellow
-        onMouseExited  = (_) => gameHandler.possibleValuesAt((i, j)).foreach(
+        onMouseExited  = (_) => if gameHandler.numberAt(i, j) == 0 then gameHandler.possibleValuesAt((i, j)).foreach(
           i => numberedButtons(i - 1).style = "-fx-background-color: #b8c6db;"
         ) // reverting the buttons to their original color
         onMouseClicked = (_) => selectedPos.value = (i, j) // changing the selectedPos value
@@ -450,17 +448,20 @@ object sudokuApp extends JFXApp3:
   /** Checks the game at the end. In case everything is good, congratulates the user and asks on the user's intended course of action. Otherwise, just tells the user they have a mistake. */
   private def endGame(): Unit    =
     if gameHandler.isGridCorrect then
-      val result = new Alert(Alert.AlertType.Information) {
+      val exitTheApp = new ButtonType("Exit the app")
+      val rsetGame  = new ButtonType("Reset the game")
+      val closePopUp = new ButtonType("Close pop-up window")
+      new Alert(Alert.AlertType.Confirmation) {
         initOwner(stage)
         title = "Congratulations!"
         headerText = "You've won the game."
         contentText = "How do you want to proceed?"
-        buttonTypes = Seq(new ButtonType("Exit the app"), new ButtonType("Reset the game"), new ButtonType("Close pop-up window"))
-      }.showAndWait()
-      result.map( _.text.toLowerCase.head ).getOrElse("") match
-        case 'e' =>  exitGame()
-        case 'r' => resetGame()
-        case _   => ()
+        buttonTypes = Seq(exitTheApp, rsetGame, closePopUp)
+      }.showAndWait() match
+        case Some(`exitTheApp`) =>  exitGame()
+        case Some(`rsetGame`)  => resetGame()
+        case Some(`closePopUp`) => ()
+        case _            => ()
     else
       pushDialogue(stage, Alert.AlertType.Warning, "Incorrect table.", "Hmmm... it seems like you made a mistake somewhere.", "")
 end sudokuApp
