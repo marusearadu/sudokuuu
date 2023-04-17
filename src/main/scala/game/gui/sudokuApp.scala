@@ -72,6 +72,7 @@ object sudokuApp extends JFXApp3:
           (event: MouseEvent) => if event.clickCount == 2 then loadGame()
       }
       id     = "abecedar"
+    root.background = Background(Array(new BackgroundFill(("#FAF9F6"), CornerRadii.Empty, Insets.Empty)))
 
     stage.scene = new Scene(parent = root, WINDOW_WIDTH, WINDOW_HEIGHT)
     setUpControls()
@@ -317,7 +318,7 @@ object sudokuApp extends JFXApp3:
         else
           gameHandler.deselect()      // deselecting any cell
           switchablePane.children = selectCellToSeeCombos // switching the content back to "please select a cell..."
-        contentVBox.children = gameHandler.getBubble.toSeq.map( arr => arr.sorted ).sortBy(arr => (arr(0), arr(1)) ).map(
+        contentVBox.children = gameHandler.getBubble.toSeq.map( arr => arr.sorted ).map(
             x => new Text(x.mkString(" + ")){font = Font("Times New Roman", FontWeight.Normal, 18)} // re-setting the sum-split values
           )
     )

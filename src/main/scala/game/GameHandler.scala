@@ -40,7 +40,9 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
     possibleSums
       .filter(_.sum == region.getSum) // getting all the possible sums for the original region
       .groupBy(_.toSet) // grouping them by the Set they represent
-      .filter(((x, _) => x.size >= distinctVals && existingValues.forall(x.contains(_))))    // filtering out the "basic" ones
+      .filter(((x, y) => x.size >= distinctVals && existingValues.forall(
+        i => existingValues.count( _ == i ) <= y.head.count( _ == i )
+      )))    // filtering out the "basic" ones
       .map( (_, y) => y.head.diff(existingValues).sorted )             // getting one element out of each
       .toSet
 
@@ -122,7 +124,7 @@ class GameHandler(private var selectedPos: Option[(Int, Int)] = None, private va
 
   // un-make this function private in order to easily test in the sbt console
   /** Creates a pretty, terminal-friendly string of the current state of the sudoku game. */
-  private def prettyPrint(): String = {
+  private def prettyPrint(): String = "\n" + {
     this.getGridCells.grouped(3).map { bigGroup =>
       bigGroup.map { row =>
         row.grouped(3).map { smallGroup =>
