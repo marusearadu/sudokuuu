@@ -1,0 +1,25 @@
+[0m[[0m[0mdebug[0m] [0m[0mCreated transactional ClassFileManager with tempDir = C:\Users\Mareos\IdeaProjects\sudokuuu\target\scala-3.2.2\classes.bak[0m
+[0m[[0m[0mdebug[0m] [0m[0mAbout to delete class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mWe backup class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mRegistering generated classes:[0m
+[0m[[0m[0mdebug[0m] [0m[0m	BadFilePathException$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Grid.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GridCell$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CorruptedFileExcption$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GridRegion.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	BadFilePathException.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GridCell.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GridRegion$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GameHandler.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CorruptedFileExcption.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	BadFilePathException$.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Grid.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GridCell$.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CorruptedFileExcption$.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GridRegion.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	BadFilePathException.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GridCell.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GridRegion$.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GameHandler.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CorruptedFileExcption.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0mRemoving the temporary directory used for backing up class files: C:\Users\Mareos\IdeaProjects\sudokuuu\target\scala-3.2.2\classes.bak[0m
