@@ -1,0 +1,1 @@
+# A killer sudoku scala helper app created for the Aalto's Programming Studio A course.
